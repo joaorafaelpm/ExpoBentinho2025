@@ -1,0 +1,2 @@
+rootProject.name = 'MyRPGGame'
+include 'core', 'desktop'
