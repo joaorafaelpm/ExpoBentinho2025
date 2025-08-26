@@ -1,6 +1,5 @@
 package com.myrpggame;
 
-import com.myrpggame.Config.GameResolution.GameResolution;
 import javafx.application.Application;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;

@@ -1,0 +1,20 @@
+.root {
+    -fx-background-color: #222222; /* cor sólida */
+    -fx-background-size: cover; /* cobre toda a tela */
+    -fx-background-position: center; /* centraliza a imagem */
+}
+
+
+
+.button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 10; /* cantos arredondados */
+}
+
+.button:hover {
+    -fx-background-color: #45a049;
+}
+

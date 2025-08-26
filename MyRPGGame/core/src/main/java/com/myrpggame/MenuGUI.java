@@ -2,6 +2,7 @@ package com.myrpggame;
 
 import com.myrpggame.Config.GameResolution.GameResolution;
 import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
@@ -30,7 +31,9 @@ public class MenuGUI {
         });
 
         VBox root = new VBox(20 , startButton , configButton , quitButton);
+        root.setAlignment(Pos.CENTER);
         scene = new Scene(root, GameResolution.getLargura(), GameResolution.getAltura());
+        scene.getStylesheets().add(getClass().getResource("/styles/styleMenu.css").toExternalForm());
     }
 
     private static void mostrarJogo(Stage stage) {
