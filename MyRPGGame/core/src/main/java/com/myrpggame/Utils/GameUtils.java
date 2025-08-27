@@ -3,6 +3,7 @@ package com.myrpggame.Utils;
 import com.myrpggame.Config.ResourceLoader.ResourceLoader;
 import com.myrpggame.Enum.PlayerState;
 import com.myrpggame.Models.Inimigo;
+import com.myrpggame.Models.Player;
 import javafx.animation.AnimationTimer;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
@@ -22,6 +23,7 @@ public class GameUtils extends AnimationTimer {
     private final double alturaSala;
     private final double larguraSala;
 
+    private boolean facingRight;
     private int currentFrame = 0;
     private long lastUpdate = 0;
 
@@ -118,14 +120,16 @@ public class GameUtils extends AnimationTimer {
         if (pressedKeys.contains(KeyCode.A)) {
             if (player.getScaleX() < 0) player.setScaleX(-player.getScaleX());
             player.setTranslateX(player.getTranslateX() - velocidadePlayer);
+            facingRight = false;
             moving = true;
         }
         if (pressedKeys.contains(KeyCode.D)) {
             if (player.getScaleX() > 0) player.setScaleX(-player.getScaleX());
             player.setTranslateX(player.getTranslateX() + velocidadePlayer);
+            facingRight = true;
             moving = true;
         }
-        playerState = moving ? PlayerState.RUNNING : PlayerState.IDLE;
+        playerState = moving && !dashing ? PlayerState.RUNNING : PlayerState.IDLE;
     }
 
     // ===== Dash =====
@@ -133,13 +137,15 @@ public class GameUtils extends AnimationTimer {
         // 🔹 Corrige o estado do player
         if (atacando) {
             playerState = PlayerState.ATTACKING;
-        } else if (pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D)) {
+        } else if (pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D) && !dashing) {
             playerState = PlayerState.RUNNING;
-        } else {
+        }
+        else {
             playerState = PlayerState.IDLE;
         }
         if (dashing) {
             if (now - dashStartTime < DASH_DURATION) {
+                playerState = PlayerState.DASHING;
                 velocidadeY = 0; // não deixa pular durante dash
                 player.setTranslateX(player.getTranslateX() + dashVelocidade);
             } else {
@@ -166,12 +172,14 @@ public class GameUtils extends AnimationTimer {
         }
     }
 
+    // ===== Dash =====
     private void iniciarDash(long now) {
         playerState = PlayerState.DASHING;
         gravidadeAtivo = false;
         dashStartTime = now;
         dashing = true;
         canDash = false;
+        currentFrame = 0; // 🔹 sempre reinicia a animação do dash
 
         if (pressedKeys.contains(KeyCode.D)) dashVelocidade = 15;
         else if (pressedKeys.contains(KeyCode.A)) dashVelocidade = -15;
@@ -179,14 +187,15 @@ public class GameUtils extends AnimationTimer {
     }
 
     // ===== Ataque =====
-    public void tentarAtaque() {
-        if (!atacando) iniciarAtaque();
-    }
-
     private void iniciarAtaque() {
         atacando = true;
         ataqueStartTime = System.nanoTime();
         playerState = PlayerState.ATTACKING;
+        currentFrame = 0; // 🔹 sempre reinicia a animação do ataque
+    }
+
+    public void tentarAtaque() {
+        if (!atacando) iniciarAtaque();
     }
 
     private void processarAtaque(long now) {
@@ -202,6 +211,7 @@ public class GameUtils extends AnimationTimer {
         // Colisão com inimigo
         if (inimigo != null && ataqueHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())) {
             inimigo.tomarDano(10);
+            System.out.println("ATACOU INIMIGO ============================================");
         }
     }
 
@@ -233,8 +243,8 @@ public class GameUtils extends AnimationTimer {
         switch (playerState) {
             case IDLE -> frameDuration = 200_000_000;
             case RUNNING -> frameDuration = 100_000_000;
-            case DASHING -> frameDuration = 50_000_000;
-            case ATTACKING -> frameDuration = 300_000_000;
+            case DASHING -> frameDuration = 80_000_000;
+            case ATTACKING -> frameDuration = 50_000_000;
             default -> frameDuration = 200_000_000;
         }
 
@@ -242,20 +252,35 @@ public class GameUtils extends AnimationTimer {
 
         switch (playerState) {
             case IDLE -> {
-                currentFrame = (currentFrame + 1) % 4;
-                player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightAFK_%d.png", currentFrame)));
+                currentFrame = (currentFrame + 1) % 3;
+                player.setImage(ResourceLoader.loadImage(
+                        String.format("/assets/KnightAFK_%d.png", currentFrame)
+                ));
+                player.setScaleX(facingRight ? 1 : -1);
             }
             case RUNNING -> {
                 currentFrame = (currentFrame + 1) % 5;
-                player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightSprint_%d.png", currentFrame)));
+                player.setImage(ResourceLoader.loadImage(
+                        String.format("/assets/KnightSprint_%d.png", currentFrame)
+                ));
             }
             case DASHING -> {
-                currentFrame = (currentFrame + 1) % 4;
-                player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightDash_%d.png", currentFrame)));
+                // 🔹 Executa a sequência e para no último frame
+                if (currentFrame < 4) {
+                    currentFrame++;
+                }
+                player.setImage(ResourceLoader.loadImage(
+                        String.format("/assets/KnightDash_%d.png", currentFrame)
+                ));
             }
             case ATTACKING -> {
-                currentFrame = (currentFrame + 1) % 3;
-                player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightLightAttack_%d.png", currentFrame)));
+                // 🔹 Executa a sequência e para no último frame
+                if (currentFrame < 3) {
+                    currentFrame++;
+                }
+                player.setImage(ResourceLoader.loadImage(
+                        String.format("/assets/KnightLightAttack_%d.png", currentFrame)
+                ));
             }
             case LOOKING_UP -> player.setImage(ResourceLoader.loadImage("/assets/KnightLookUp.png"));
             case LOOKING_DOWN -> player.setImage(ResourceLoader.loadImage("/assets/KnightLookDown.png"));
@@ -288,10 +313,14 @@ public class GameUtils extends AnimationTimer {
         }
         root.getChildren().add(fundo);
         root.getChildren().add(player);
-
+//        Iniciando a barra de vida
+        Player player1 = new Player(player.getImage() , player.getTranslateX() , player.getTranslateY());
+        HUDVida hudVida = new HUDVida(player1 , 8);
+        root.getChildren().add(hudVida.getBarraVida());
         if (index > 0 && index % 5 == 0) {
             inimigo = new Inimigo(50, 50, 30, 1.5);
             root.getChildren().add(inimigo.getCorpo());
+
         } else {
             inimigo = null;
         }

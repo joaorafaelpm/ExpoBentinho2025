@@ -8,6 +8,9 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import static com.myrpggame.Config.GameResolution.GameResolution.getAltura;
+import static com.myrpggame.Config.GameResolution.GameResolution.getLargura;
+
 public class MenuGUI {
     private final Scene scene;
 
@@ -32,17 +35,17 @@ public class MenuGUI {
 
         VBox root = new VBox(20 , startButton , configButton , quitButton);
         root.setAlignment(Pos.CENTER);
-        scene = new Scene(root, GameResolution.getLargura(), GameResolution.getAltura());
+        scene = new Scene(root , getLargura() , getAltura());
         scene.getStylesheets().add(getClass().getResource("/styles/styleMenu.css").toExternalForm());
     }
 
     private static void mostrarJogo(Stage stage) {
-        GameGUI gameView = new GameGUI(stage, GameResolution.getLargura() , GameResolution.getAltura());
-        stage.setScene(gameView.getScene());
+        GameGUI gameView = new GameGUI(stage, getLargura() , getAltura());
+        GameResolution.changeScene(stage , gameView.getScene());
     }
     private static void mostrarConfiguracoes(Stage stage) {
         ConfigGUI configGUI = new ConfigGUI(stage);
-        stage.setScene(configGUI.getScene());
+        GameResolution.changeScene(stage , configGUI.getScene());
     }
 
     public Scene getScene() {

@@ -5,17 +5,25 @@ import javafx.scene.image.ImageView;
 
 public class Player {
     private final ImageView sprite;
+
+
+
     private int vida;
+    private int dano;
 
     public Player(Image imagemInicial, double x, double y) {
         this.sprite = new ImageView(imagemInicial);
         this.sprite.setTranslateX(x);
         this.sprite.setTranslateY(y);
-        this.vida = 100;
+        this.vida = 8;
+        this.dano = 10;
     }
 
     public ImageView getSprite() {
         return sprite;
+    }
+    public void tomarDano (double dano) {
+        this.vida -= dano ;
     }
 
     public double getX() {
@@ -41,7 +49,19 @@ public class Player {
         return vida;
     }
 
+    public void setVida(int vida) {
+        this.vida = vida;
+    }
+
     public boolean colidiuCom(Inimigo inimigo) {
         return sprite.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent());
+    }
+
+    public int getDano() {
+        return dano;
+    }
+
+    public void setDano(int dano) {
+        this.dano = dano;
     }
 }

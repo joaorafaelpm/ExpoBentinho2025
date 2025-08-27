@@ -7,6 +7,7 @@ public class Inimigo {
     private final Rectangle corpo;
     private final double velocidade;
     private double vida ;
+    private double dano ;
 
 
 
@@ -15,6 +16,8 @@ public class Inimigo {
         this.corpo.setX(x);
         this.corpo.setY(y);
         this.velocidade = velocidade;
+        this.vida = 100;
+        this.dano = 10;
     }
 
     public Rectangle getCorpo() {
@@ -38,5 +41,13 @@ public class Inimigo {
 
     public void tomarDano (double dano) {
         this.vida -= dano ;
+    }
+
+    public double getDano() {
+        return dano;
+    }
+
+    public void setDano(double dano) {
+        this.dano = dano;
     }
 }

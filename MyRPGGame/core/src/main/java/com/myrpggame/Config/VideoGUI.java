@@ -8,6 +8,9 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import static com.myrpggame.Config.GameResolution.GameResolution.getAltura;
+import static com.myrpggame.Config.GameResolution.GameResolution.getLargura;
+
 public class VideoGUI {
     private final Scene scene;
 
@@ -27,28 +30,32 @@ public class VideoGUI {
         // Botão de voltar
         voltar.setOnAction(e -> {
             MenuGUI menuView = new MenuGUI(stage);
-            stage.setScene(menuView.getScene());
+            GameResolution.changeScene(stage , menuView.getScene());
         });
 
         VBox root = new VBox(20, resolucao800x600, resolucao1280x720, resolucao1920x1080, fullScreen ,voltar);
-        scene = new Scene(root, GameResolution.getLargura(), GameResolution.getAltura());
+        scene = new Scene(root , getLargura() , getAltura());
     }
 
-    private void aplicarResolucao(Stage stage, double largura, double altura) {
-        GameResolution.setResolucao(stage , largura, altura);
 
-        // Atualiza a resolução da própria cena
-        stage.setWidth(largura);
-        stage.setHeight(altura);
+    private void aplicarResolucao(Stage stage, double largura, double altura) {
+        if (!stage.isFullScreen()) {
+            // Atualiza a resolução da própria cena
+            stage.setWidth(largura);
+            stage.setHeight(altura);
+        }
+        stage.setFullScreen(true);
     }
 
     private void aplicarFullScreen(Stage stage) {
         if (stage.isFullScreen()) {
             stage.setFullScreen(false);
+            GameResolution.isFullScreen(stage);
             return ;
         }
         stage.setFullScreen(true);
-    }
+        GameResolution.isFullScreen(stage);
+        }
 
     public Scene getScene() {
         return scene;

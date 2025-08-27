@@ -7,6 +7,8 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import static com.myrpggame.Config.GameResolution.GameResolution.*;
+
 public class ConfigGUI {
     private final Scene scene;
 
@@ -16,15 +18,17 @@ public class ConfigGUI {
 
         voltar.setOnAction(e -> {
             MenuGUI menuView = new MenuGUI(stage);
-            stage.setScene(menuView.getScene());
+            GameResolution.changeScene(stage , menuView.getScene());
+
         });
         video.setOnAction(e -> {
             VideoGUI menuView = new VideoGUI(stage);
-            stage.setScene(menuView.getScene());
+            GameResolution.changeScene(stage , menuView.getScene());
+
         });
 
         VBox root = new VBox(20 , video, voltar );
-        scene = new Scene(root, GameResolution.getLargura(), GameResolution.getAltura());
+        scene = new Scene(root, getLargura(), getAltura());
     }
 
     public Scene getScene() {

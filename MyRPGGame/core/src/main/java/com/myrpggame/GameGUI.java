@@ -1,7 +1,10 @@
 package com.myrpggame;
 
+import com.myrpggame.Config.GameResolution.GameResolution;
 import com.myrpggame.Models.Inimigo;
+import com.myrpggame.Models.Player;
 import com.myrpggame.Utils.GameUtils;
+import com.myrpggame.Utils.HUDVida;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
@@ -10,12 +13,14 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
+
 import javafx.stage.Stage;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+
+import static com.myrpggame.Config.GameResolution.GameResolution.getAltura;
+import static com.myrpggame.Config.GameResolution.GameResolution.getLargura;
 
 public class GameGUI {
 
@@ -40,7 +45,13 @@ public class GameGUI {
 
 
 
+
         root = new Pane(player);
+
+//        Barra de vida do Jogador
+        Player player1 = new Player(knightAFK , player.getLayoutX(), player.getLayoutY());
+        HUDVida hudVida = new HUDVida(player1 , 8);
+        root.getChildren().add(hudVida.getBarraVida());
 
         // 🔹 Menu de pausa (overlay)
         pauseMenu = new VBox(20);
@@ -58,7 +69,7 @@ public class GameGUI {
 
         // 🔹 Container com jogo + menu sobreposto
         StackPane container = new StackPane(root, pauseMenu);
-        scene = new Scene(container, larguraSala, alturaSala);
+        scene = new Scene(container , getLargura(), getAltura() );
 
         // 🔹 Captura teclas
         GameUtils gameLoop = new GameUtils(player, root, pauseMenu, pressedKeys, alturaSala , larguraSala);
