@@ -17,8 +17,12 @@ public class HUDVida {
     private final StackPane barraVidaContainer = new StackPane();
     private final HBox masksContainer = new HBox(5);
     private final List<ImageView> mascaras = new ArrayList<>();
-    private int hpMax;
+    private int hpMax = 8;
     private int hpAtual;
+    private final Player player;
+
+    private boolean morto = false;
+    private long morteStartTime = 0;
 
     private final String[] breakFrames = {
             "/assets/LostLife_1.png",
@@ -39,8 +43,8 @@ public class HUDVida {
     private final Image mascaraCheia = ResourceLoader.loadImage("/assets/FullMask.png");
     private final Image mascaraVazia = ResourceLoader.loadImage("/assets/EmptyMask.png");
 
-    public HUDVida(Player player , int hpMax) {
-        this.hpMax = hpMax;
+    public HUDVida(Player player) {
+        this.player = player;
         this.hpAtual = player.getVida();
         inicializar();
     }
@@ -52,8 +56,15 @@ public class HUDVida {
         background.setTranslateX(10);
         background.setTranslateY(5);
 
-        for (int i = 0; i < hpMax; i++) {
+        for (int i = 0; i < hpAtual; i++) {
             ImageView mask = new ImageView(mascaraCheia);
+            mask.setFitWidth(30);
+            mask.setFitHeight(30);
+            mascaras.add(mask);
+            masksContainer.getChildren().add(mask);
+        }
+        for (int i = 0 ; i < hpMax - hpAtual ; i++) {
+            ImageView mask = new ImageView(mascaraVazia);
             mask.setFitWidth(30);
             mask.setFitHeight(30);
             mascaras.add(mask);
@@ -64,10 +75,11 @@ public class HUDVida {
         masksContainer.setTranslateY(45);
         StackPane.setAlignment(masksContainer, javafx.geometry.Pos.BOTTOM_LEFT);
 
+        // Botões de teste
         Button buttonTomarDano = new Button("Perder vida");
-        buttonTomarDano.setOnAction(e -> tomarDano(1));
+        buttonTomarDano.setOnAction(e -> tomarDano(1 , player));
         Button buttonRecuperarVida = new Button("Recuperar vida");
-        buttonRecuperarVida.setOnAction(e -> curar(1));
+        buttonRecuperarVida.setOnAction(e -> curar(1 , player));
 
         buttonTomarDano.setTranslateY(100);
         buttonRecuperarVida.setTranslateY(100);
@@ -80,39 +92,64 @@ public class HUDVida {
         return barraVidaContainer;
     }
 
-    public void tomarDano(int dano) {
+    public void tomarDano(int dano , Player player) {
+        if (morto) return;
+
         int hpAnterior = hpAtual;
         hpAtual = Math.max(0, hpAtual - dano);
+        player.tomarDano(dano);
 
         for (int i = hpAnterior - 1; i >= hpAtual; i--) {
             animarPerdaVida(mascaras.get(i));
         }
+
+        if (hpAtual <= 0 && !morto) {
+            morto = true;
+        }
     }
 
-    public void curar(int qtd) {
-        int hpAnterior = hpAtual;
-        hpAtual = Math.min(hpMax, hpAtual + qtd);
+    public void curar(int qtd , Player player) {
+        if (morto) return;
 
+        int hpAnterior = hpAtual;
+        hpAtual = hpAtual + qtd;
+        player.recuperarVida(qtd);
         for (int i = hpAnterior; i < hpAtual; i++) {
             animarRecuperacaoVida(mascaras.get(i));
         }
+    }
+
+    // ==== Resetar vida (quando reinicia a fase) ====
+    public void resetarVida() {
+        hpAtual = hpMax;
+        player.setVida(hpMax);
+        morto = false;
+
+        for (int i = 0; i < mascaras.size(); i++) {
+            mascaras.get(i).setImage(i < hpAtual ? mascaraCheia : mascaraVazia);
+        }
+    }
+
+    public boolean isMorto() {
+        return morto;
+    }
+
+    public long getMorteStartTime() {
+        return morteStartTime;
     }
 
     // ==== Animação de perda de vida ====
     private void animarPerdaVida(ImageView mask) {
         Timeline timeline = new Timeline();
 
-        // Primeira imagem com offset Y
         timeline.getKeyFrames().add(new KeyFrame(Duration.ZERO, e -> {
             mask.setImage(ResourceLoader.loadImage(breakFrames[0]));
             mask.setFitHeight(breakHeights[0]);
             mask.setTranslateY(-15);
         }));
 
-        // Congela a primeira imagem por 250ms
         timeline.getKeyFrames().add(new KeyFrame(Duration.millis(250), e -> {}));
 
-        // Frames restantes
         for (int i = 1; i < breakFrames.length; i++) {
             int index = i;
             timeline.getKeyFrames().add(new KeyFrame(Duration.millis(250 + 75 * i), e -> {
@@ -122,7 +159,6 @@ public class HUDVida {
             }));
         }
 
-        // Último frame: máscara vazia
         timeline.getKeyFrames().add(new KeyFrame(Duration.millis(250 + 75 * breakFrames.length), e -> {
             mask.setImage(mascaraVazia);
             mask.setTranslateY(0);
@@ -137,12 +173,10 @@ public class HUDVida {
     private void animarRecuperacaoVida(ImageView mask) {
         Timeline timeline = new Timeline();
 
-        // Primeira imagem (sem offset)
         timeline.getKeyFrames().add(new KeyFrame(Duration.ZERO, e -> {
             mask.setImage(ResourceLoader.loadImage(recoverFrames[0]));
         }));
 
-        // Frames restantes
         for (int i = 1; i < recoverFrames.length; i++) {
             int index = i;
             timeline.getKeyFrames().add(new KeyFrame(Duration.millis(100 * i), e -> {
@@ -150,7 +184,6 @@ public class HUDVida {
             }));
         }
 
-        // Último frame: máscara cheia
         timeline.getKeyFrames().add(new KeyFrame(Duration.millis(100 * recoverFrames.length), e -> {
             mask.setImage(mascaraCheia);
             mask.setFitWidth(30);
@@ -161,7 +194,7 @@ public class HUDVida {
         timeline.play();
     }
 
-
-
+    public int getHpMax() {
+        return hpMax;
+    }
 }
-

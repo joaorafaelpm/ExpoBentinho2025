@@ -3,7 +3,8 @@ package com.myrpggame;
 import com.myrpggame.Config.GameResolution.GameResolution;
 import com.myrpggame.Models.Inimigo;
 import com.myrpggame.Models.Player;
-import com.myrpggame.Utils.GameUtils;
+import com.myrpggame.Utils.GameLoop;
+
 import com.myrpggame.Utils.HUDVida;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -50,7 +51,7 @@ public class GameGUI {
 
 //        Barra de vida do Jogador
         Player player1 = new Player(knightAFK , player.getLayoutX(), player.getLayoutY());
-        HUDVida hudVida = new HUDVida(player1 , 8);
+        HUDVida hudVida = new HUDVida(player1);
         root.getChildren().add(hudVida.getBarraVida());
 
         // 🔹 Menu de pausa (overlay)
@@ -72,16 +73,16 @@ public class GameGUI {
         scene = new Scene(container , getLargura(), getAltura() );
 
         // 🔹 Captura teclas
-        GameUtils gameLoop = new GameUtils(player, root, pauseMenu, pressedKeys, alturaSala , larguraSala);
+        GameLoop gameLoop = new GameLoop(player, root, pauseMenu, pressedKeys, alturaSala , larguraSala);
         scene.setOnKeyPressed(event -> {
             pressedKeys.add(event.getCode());
             if (event.getCode() == KeyCode.ESCAPE) pauseMenu.setVisible(!pauseMenu.isVisible());
-            if (event.getCode() == KeyCode.Q) gameLoop.tentarDash();
+            if (event.getCode() == KeyCode.Q) gameLoop.getPlayerMovement().tentarDash();
         });
         // No construtor de GameUtils, adicione algo assim:
         scene.setOnMousePressed(event -> {
             if (event.isPrimaryButtonDown()) { // botão esquerdo
-                gameLoop.tentarAtaque();
+                gameLoop.getPlayerAttack().tentarAtaque();
             }
         });
         scene.setOnKeyReleased(event -> pressedKeys.remove(event.getCode()));

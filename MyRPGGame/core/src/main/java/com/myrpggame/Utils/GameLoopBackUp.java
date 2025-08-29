@@ -2,9 +2,11 @@ package com.myrpggame.Utils;
 
 import com.myrpggame.Config.ResourceLoader.ResourceLoader;
 import com.myrpggame.Enum.PlayerState;
+import com.myrpggame.Models.Fase;
 import com.myrpggame.Models.Inimigo;
 import com.myrpggame.Models.Player;
 import javafx.animation.AnimationTimer;
+import javafx.print.PageOrientation;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
@@ -14,7 +16,7 @@ import javafx.scene.shape.Rectangle;
 
 import java.util.Set;
 
-public class GameUtils extends AnimationTimer {
+public class GameLoopBackUp extends AnimationTimer {
 
     private final ImageView player;
     private final Pane root;
@@ -44,17 +46,45 @@ public class GameUtils extends AnimationTimer {
     private static final long DASH_COOLDOWN = 500_000_000;
 
     private boolean atacando = false;
+    private boolean inimigoAtingido = false ;
     private long ataqueStartTime = 0;
     private static final long ATAQUE_DURATION = 300_000_000;
+
+    // === Cooldowns ===
+    private static final long PLAYER_ATTACK_COOLDOWN = 400_000_000; // 0.4s
+    private static final long ENEMY_ATTACK_COOLDOWN = 1000_000_000; // 1s
+
+    private long tempoMorte;
+    private final long DURACAO_MORTE = 1500_000_000L; // 1.5s em nanos
+    private static final long MORTE_FREEZE_DURATION = 800_000_000; // 0.8s travado antes de animar
+
+
+    private long lastPlayerHitTime = 0;
+    private long lastEnemyHitTime = 0;
+
+
 
     private PlayerState playerState = PlayerState.IDLE;
     private Inimigo inimigo;
     private int salaAtual = 0;
 
+    private Player personagem = new Player();
+    private HUDVida hudVida = new HUDVida(personagem);
     private final ImageView ataqueHitbox = new ImageView();
 
-    public GameUtils(ImageView player, Pane root, VBox pauseMenu, Set<KeyCode> pressedKeys,
-                     double alturaSala, double larguraSala) {
+    private boolean morto = false;
+    private long morteStartTime = 0;
+    private static final long MORTE_DURATION = 1500_000_000; // 1.5s de animação
+
+
+    private final Fase[] fases = {
+            new Fase(Color.LIGHTBLUE, 1),
+            new Fase(Color.LIGHTGREEN, 2),
+            new Fase(Color.LIGHTPINK, 3),
+            new Fase(Color.DARKRED, 1) // Ex: boss
+    };
+    public GameLoopBackUp(ImageView player, Pane root, VBox pauseMenu, Set<KeyCode> pressedKeys,
+                    double alturaSala, double larguraSala) {
         this.player = player;
         this.root = root;
         this.pauseMenu = pauseMenu;
@@ -74,7 +104,17 @@ public class GameUtils extends AnimationTimer {
         atualizarHitboxAtaque();
         atualizarInimigo();
         verificarTrocaSala();
+        atualizarEstado(now);
         atualizarAnimacao(now);
+
+        if (personagem.getVida() <= 0 && !morto) {
+            morto = true;
+            morteStartTime = now;
+            playerState = PlayerState.DEAD;
+            currentFrame = 0;
+            System.out.println("☠ Player morreu!");
+        }
+        processarMorte(now);
     }
 
     // ===== Movimento e gravidade =====
@@ -110,10 +150,7 @@ public class GameUtils extends AnimationTimer {
         if (dashing || atacando) return;
 
         boolean moving = false;
-
-        // Vertical
-        if (pressedKeys.contains(KeyCode.W)) playerState = PlayerState.LOOKING_UP;
-        else if (pressedKeys.contains(KeyCode.S)) playerState = PlayerState.LOOKING_DOWN;
+        boolean lookingDownUp = false;
 
         // Horizontal
         double velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 10 : 5;
@@ -129,20 +166,12 @@ public class GameUtils extends AnimationTimer {
             facingRight = true;
             moving = true;
         }
-        playerState = moving && !dashing ? PlayerState.RUNNING : PlayerState.IDLE;
     }
 
     // ===== Dash =====
     private void processarDash(long now) {
         // 🔹 Corrige o estado do player
-        if (atacando) {
-            playerState = PlayerState.ATTACKING;
-        } else if (pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D) && !dashing) {
-            playerState = PlayerState.RUNNING;
-        }
-        else {
-            playerState = PlayerState.IDLE;
-        }
+
         if (dashing) {
             if (now - dashStartTime < DASH_DURATION) {
                 playerState = PlayerState.DASHING;
@@ -153,9 +182,6 @@ public class GameUtils extends AnimationTimer {
                 gravidadeAtivo = true;
                 dashVelocidade = 0; // fim do dash: inicia cooldown
                 lastDashTime = now; // só volta pro estado correto
-                if (pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D)) {
-                    playerState = PlayerState.RUNNING; }
-                else { playerState = PlayerState.IDLE; }
             }
         }
         // --- Cooldown do dash ---
@@ -191,12 +217,14 @@ public class GameUtils extends AnimationTimer {
         atacando = true;
         ataqueStartTime = System.nanoTime();
         playerState = PlayerState.ATTACKING;
-        currentFrame = 0; // 🔹 sempre reinicia a animação do ataque
+        currentFrame = 0;
     }
 
     public void tentarAtaque() {
         if (!atacando) iniciarAtaque();
     }
+
+
 
     private void processarAtaque(long now) {
         if (!atacando) return;
@@ -204,17 +232,24 @@ public class GameUtils extends AnimationTimer {
         // Depois da duração do ataque
         if (now - ataqueStartTime >= ATAQUE_DURATION) {
             atacando = false;
-            playerState = pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D)
-                    ? PlayerState.RUNNING : PlayerState.IDLE;
         }
 
-        // Colisão com inimigo
-        if (inimigo != null && ataqueHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())) {
-            inimigo.tomarDano(10);
+        // Colisão com inimigo (apenas se não estiver em cooldown)
+        if (inimigo != null
+                && now - ataqueStartTime <= ATAQUE_DURATION
+                && ataqueHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())
+                && now - lastPlayerHitTime >= PLAYER_ATTACK_COOLDOWN) {
+
+            inimigo.tomarDano(personagem.getDano());
+            lastPlayerHitTime = now;
             System.out.println("ATACOU INIMIGO ============================================");
+
+            if (inimigo.estaMorto()) {
+                root.getChildren().remove(inimigo.getCorpo());
+                inimigo = null;
+            }
         }
     }
-
 
     private void atualizarHitboxAtaque() {
         if (atacando) {
@@ -231,18 +266,77 @@ public class GameUtils extends AnimationTimer {
     // ===== Inimigo =====
     private void atualizarInimigo() {
         if (inimigo == null) return;
+
         inimigo.seguir(player.getTranslateX(), player.getTranslateY());
-        if (player.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())) {
+
+        // Só dá dano se estiver sem cooldown de ataque
+        long now = System.nanoTime();
+        if (player.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())
+                && now - lastEnemyHitTime >= ENEMY_ATTACK_COOLDOWN) {
+
+            hudVida.tomarDano(inimigo.getDano(), personagem);
+            lastEnemyHitTime = now;
             System.out.println("Player colidiu com inimigo!");
         }
     }
+
+    private void processarMorte(long now) {
+        if (!morto) return;
+
+        // Enquanto a animação de morte não terminar, não faz mais nada
+        if (now - morteStartTime < MORTE_DURATION) {
+            playerState = PlayerState.DEAD;
+            return;
+        }
+
+        // Depois que a animação terminou, respawna
+        respawnPlayer();
+        morto = false;
+    }
+
+
+
+    private void respawnPlayer() {
+        // Restaura vida
+        personagem.setVida(personagem.getVidaMaxima());
+
+        // Reposiciona no início da fase
+        player.setTranslateX(40);
+        player.setTranslateY(alturaSala - player.getBoundsInParent().getHeight());
+
+        // Define estado como "levantando"
+        playerState = PlayerState.RESPAWNING;
+        currentFrame = 0;
+    }
+
+    private void atualizarEstado(long now) {
+        if (morto) {
+            playerState = PlayerState.DEAD;
+            return; // nada mais sobrescreve
+        }
+
+        if (atacando) {
+            playerState = PlayerState.ATTACKING;
+        } else if (dashing) {
+            playerState = PlayerState.DASHING;
+        } else if (pressedKeys.contains(KeyCode.W)) {
+            playerState = PlayerState.LOOKING_UP;
+        } else if (pressedKeys.contains(KeyCode.S)) {
+            playerState = PlayerState.LOOKING_DOWN;
+        } else if (pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D)) {
+            playerState = PlayerState.RUNNING;
+        } else {
+            playerState = PlayerState.IDLE;
+        }
+    }
+
 
     // ===== Animação =====
     private void atualizarAnimacao(long now) {
         long frameDuration;
         switch (playerState) {
             case IDLE -> frameDuration = 200_000_000;
-            case RUNNING -> frameDuration = 100_000_000;
+            case RUNNING , DEAD -> frameDuration = 100_000_000;
             case DASHING -> frameDuration = 80_000_000;
             case ATTACKING -> frameDuration = 50_000_000;
             default -> frameDuration = 200_000_000;
@@ -253,19 +347,21 @@ public class GameUtils extends AnimationTimer {
         switch (playerState) {
             case IDLE -> {
                 currentFrame = (currentFrame + 1) % 3;
+                if (currentFrame == 0) currentFrame=1;
                 player.setImage(ResourceLoader.loadImage(
                         String.format("/assets/KnightAFK_%d.png", currentFrame)
                 ));
-                player.setScaleX(facingRight ? 1 : -1);
+                player.setScaleX(facingRight ? -1 : 1);
             }
             case RUNNING -> {
                 currentFrame = (currentFrame + 1) % 5;
+                if (currentFrame == 0) currentFrame=1;
                 player.setImage(ResourceLoader.loadImage(
                         String.format("/assets/KnightSprint_%d.png", currentFrame)
                 ));
             }
             case DASHING -> {
-                // 🔹 Executa a sequência e para no último frame
+                if (currentFrame == 0) currentFrame=1;
                 if (currentFrame < 4) {
                     currentFrame++;
                 }
@@ -274,16 +370,41 @@ public class GameUtils extends AnimationTimer {
                 ));
             }
             case ATTACKING -> {
-                // 🔹 Executa a sequência e para no último frame
+                if (currentFrame == 0) currentFrame=1;
                 if (currentFrame < 3) {
                     currentFrame++;
                 }
                 player.setImage(ResourceLoader.loadImage(
                         String.format("/assets/KnightLightAttack_%d.png", currentFrame)
                 ));
+
             }
-            case LOOKING_UP -> player.setImage(ResourceLoader.loadImage("/assets/KnightLookUp.png"));
-            case LOOKING_DOWN -> player.setImage(ResourceLoader.loadImage("/assets/KnightLookDown.png"));
+            case LOOKING_UP -> {
+                player.setImage(ResourceLoader.loadImage("/assets/KnightLookUp.png"));
+                player.setScaleX(facingRight ? -1 : 1);
+
+            }
+            case LOOKING_DOWN -> {
+                player.setImage(ResourceLoader.loadImage("/assets/KnightLookDown.png"));
+                player.setScaleX(facingRight ? -1 : 1);
+            }
+            case DEAD -> {
+                if (currentFrame == 0) currentFrame=1;
+                if (currentFrame < 14) currentFrame++;
+                player.setImage(ResourceLoader.loadImage(
+                        String.format("/assets/dying/PlayerDying_%d.png", currentFrame)
+                ));
+            }
+
+            case RESPAWNING -> {
+                if (currentFrame < 3) currentFrame++;
+                player.setImage(ResourceLoader.loadImage(
+                        String.format("/assets/KnightRespawn_%d.png", currentFrame)
+                ));
+                if (currentFrame >= 3) {
+                    playerState = PlayerState.IDLE;
+                }
+            }
         }
 
         lastUpdate = now;
@@ -291,40 +412,43 @@ public class GameUtils extends AnimationTimer {
 
     // ===== Sala =====
     private void verificarTrocaSala() {
-        if (player.getTranslateX() > larguraSala) {
-            salaAtual++;
-            carregarSala(salaAtual);
+        // Player chegou ao final da fase
+        if (player.getTranslateX() > larguraSala - 40) {
+            if (salaAtual < fases.length - 1) {
+                salaAtual++;
+                carregarSala(salaAtual);
+                player.setTranslateX(40); // começa no início da nova fase
+            }
+        }
+
+        // Impede o player de voltar além do início da fase
+        if (player.getTranslateX() < 0) {
             player.setTranslateX(0);
-        } else if (player.getTranslateX() < 0) {
-            salaAtual--;
-            carregarSala(salaAtual);
-            player.setTranslateX(larguraSala - 40);
         }
     }
 
     private void carregarSala(int index) {
         root.getChildren().clear();
-        Rectangle fundo = new Rectangle(larguraSala, alturaSala);
-        switch (index) {
-            case 0 -> fundo.setFill(Color.LIGHTBLUE);
-            case 1 -> fundo.setFill(Color.LIGHTGREEN);
-            case 2 -> fundo.setFill(Color.LIGHTPINK);
-            default -> fundo.setFill(Color.GRAY);
-        }
-        root.getChildren().add(fundo);
-        root.getChildren().add(player);
-//        Iniciando a barra de vida
-        Player player1 = new Player(player.getImage() , player.getTranslateX() , player.getTranslateY());
-        HUDVida hudVida = new HUDVida(player1 , 8);
-        root.getChildren().add(hudVida.getBarraVida());
-        if (index > 0 && index % 5 == 0) {
-            inimigo = new Inimigo(50, 50, 30, 1.5);
-            root.getChildren().add(inimigo.getCorpo());
 
-        } else {
-            inimigo = null;
+        // Fundo da fase
+        Rectangle fundo = new Rectangle(larguraSala, alturaSala);
+        fundo.setFill(fases[index].getCorFundo());
+        root.getChildren().add(fundo);
+
+        // Player
+        root.getChildren().add(player);
+
+        // HUD
+        root.getChildren().add(hudVida.getBarraVida());
+
+        // Inimigos
+        for (int i = 0; i < fases[index].getQuantidadeInimigos(); i++) {
+            inimigo = new Inimigo(50 + i * 100, alturaSala - 100, 30, 3);
+            root.getChildren().add(inimigo.getCorpo());
         }
     }
+
+
 
     private boolean onGround() {
         return player.getTranslateY() >= alturaSala - player.getBoundsInParent().getHeight();

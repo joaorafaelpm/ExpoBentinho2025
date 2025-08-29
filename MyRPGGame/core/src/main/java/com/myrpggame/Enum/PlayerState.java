@@ -7,5 +7,7 @@ public enum PlayerState {
     LOOKING_DOWN,
     DASHING ,
     ATTACKING,
+    DEAD,
+    RESPAWNING,
     JUMPING
 }

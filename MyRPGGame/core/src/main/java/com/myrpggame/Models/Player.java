@@ -6,17 +6,23 @@ import javafx.scene.image.ImageView;
 public class Player {
     private final ImageView sprite;
 
-
-
     private int vida;
+    private int vidaMaxima = 8;
     private int dano;
+
+    
 
     public Player(Image imagemInicial, double x, double y) {
         this.sprite = new ImageView(imagemInicial);
         this.sprite.setTranslateX(x);
         this.sprite.setTranslateY(y);
         this.vida = 8;
-        this.dano = 10;
+        this.dano = 15;
+    }
+    public Player () {
+        this.sprite = null ;
+        this.vida = 8 ;
+        this.dano = 15;
     }
 
     public ImageView getSprite() {
@@ -26,6 +32,10 @@ public class Player {
         this.vida -= dano ;
     }
 
+    public void recuperarVida (double vida) {
+        this.vida += vida ;
+    }
+
     public double getX() {
         return sprite.getTranslateX();
     }
@@ -33,6 +43,8 @@ public class Player {
     public double getY() {
         return sprite.getTranslateY();
     }
+
+
 
     public void move(double dx, double dy) {
         sprite.setTranslateX(sprite.getTranslateX() + dx);
@@ -63,5 +75,13 @@ public class Player {
 
     public void setDano(int dano) {
         this.dano = dano;
+    }
+
+    public int getVidaMaxima() {
+        return vidaMaxima;
+    }
+
+    public void setVidaMaxima(int vidaMaxima) {
+        this.vidaMaxima = vidaMaxima;
     }
 }

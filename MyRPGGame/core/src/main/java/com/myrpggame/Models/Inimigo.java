@@ -1,13 +1,14 @@
 package com.myrpggame.Models;
 
+import javafx.scene.image.ImageView;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
 public class Inimigo {
     private final Rectangle corpo;
     private final double velocidade;
-    private double vida ;
-    private double dano ;
+    private int vida ;
+    private int dano ;
 
 
 
@@ -17,7 +18,7 @@ public class Inimigo {
         this.corpo.setY(y);
         this.velocidade = velocidade;
         this.vida = 100;
-        this.dano = 10;
+        this.dano = 1;
     }
 
     public Rectangle getCorpo() {
@@ -35,19 +36,21 @@ public class Inimigo {
         }
     }
 
-    public void setVida(double vida) {
+    public void setVida(int vida) {
         this.vida = vida;
     }
 
-    public void tomarDano (double dano) {
+    public void tomarDano (int dano) {
         this.vida -= dano ;
     }
 
-    public double getDano() {
-        return dano;
-    }
-
-    public void setDano(double dano) {
+    public void setDano(int dano) {
         this.dano = dano;
     }
+
+    public boolean estaMorto() {
+        return vida <= 0;
+    }
+
+    public int getDano() { return dano; }
 }
