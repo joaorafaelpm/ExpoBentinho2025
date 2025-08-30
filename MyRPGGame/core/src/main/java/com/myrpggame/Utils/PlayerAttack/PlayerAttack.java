@@ -17,50 +17,61 @@ public class PlayerAttack {
     private final ImageView ataqueHitbox = new ImageView();
     private List<Inimigo> inimigos;
 
-    private boolean atacando = false;
-    private long ataqueStartTime = 0;
-    private static final long ATAQUE_DURATION = 300_000_000;
-    private static final long PLAYER_ATTACK_COOLDOWN = 400_000_000;
-    private long lastPlayerHitTime = 0;
-    private int currentFrame;
+    private boolean atacando = false;            // indica se o ataque está ativo
+    private boolean atacandoEmCooldown = false;  // impede iniciar novo ataque enquanto animação não termina
     private boolean bloqueado = false;
 
+    private long ataqueStartTime = 0;
+    private long lastPlayerHitTime = 0;
 
-    public PlayerAttack(ImageView player, Pane root, Player personagem, int currentFrame) {
+    private List<Integer> inimigosMortosPorFase ;
+
+    private static final long ATAQUE_DURATION = 300_000_000;        // duração do ataque
+    private static final long PLAYER_ATTACK_COOLDOWN = 400_000_000; // cooldown entre ataques
+
+    private int currentFrame;
+
+    public PlayerAttack(ImageView player, Pane root, Player personagem, int currentFrame , List<Integer> inimigosMortosPorFase) {
         this.player = player;
         this.root = root;
         this.personagem = personagem;
         this.currentFrame = currentFrame;
+        this.inimigosMortosPorFase = inimigosMortosPorFase;
     }
 
     public void setInimigos(List<Inimigo> inimigos) {
         this.inimigos = inimigos;
     }
 
-    private void iniciarAtaque() {
-        atacando = true;
-        ataqueStartTime = System.nanoTime();
-        currentFrame = 0;
-    }
+    public void bloquearAtaque() { bloqueado = true; }
+    public void desbloquearAtaque() { bloqueado = false; }
 
+    // Tenta iniciar um ataque
     public void tentarAtaque() {
         long now = System.nanoTime();
-        if (!atacando && now - lastPlayerHitTime >= PLAYER_ATTACK_COOLDOWN) {
+        if (!atacandoEmCooldown && !atacando && now - lastPlayerHitTime >= PLAYER_ATTACK_COOLDOWN) {
             iniciarAtaque();
         }
     }
 
-    public void bloquearAtaque() { bloqueado = true; }
-    public void desbloquearAtaque() { bloqueado = false; }
+    private void iniciarAtaque() {
+        atacando = true;
+        atacandoEmCooldown = true; // bloqueia novo ataque até terminar a animação
+        ataqueStartTime = System.nanoTime();
+        currentFrame = 0;
+    }
 
+    // Processa o ataque e aplica dano aos inimigos
     public void processarAtaque(long now) {
-        if (bloqueado) return;
-        if (!atacando || inimigos == null) return;
+        if (bloqueado || !atacando || inimigos == null) return;
 
+        // Se a animação terminou, libera o cooldown
         if (now - ataqueStartTime >= ATAQUE_DURATION) {
             atacando = false;
+            atacandoEmCooldown = false;
         }
 
+//        Verificação para pegar o hit em mais de um inimigo
         Iterator<Inimigo> iter = inimigos.iterator();
         while (iter.hasNext()) {
             Inimigo inimigo = iter.next();
@@ -75,12 +86,20 @@ public class PlayerAttack {
 
                 if (inimigo.estaMorto()) {
                     root.getChildren().remove(inimigo.getCorpo());
-                    iter.remove(); // remove da lista para não processar mais
+                    iter.remove();
                 }
             }
+            if (inimigo.estaMorto()) {
+                root.getChildren().remove(inimigo.getCorpo());
+                inimigosMortosPorFase.add(inimigo.getId());
+                iter.remove();
+            }
         }
+
+
     }
 
+    // Atualiza posição da hitbox e animação do ataque
     public void atualizarHitboxAtaque() {
         if (atacando) {
             ataqueHitbox.setScaleX(player.getScaleX());

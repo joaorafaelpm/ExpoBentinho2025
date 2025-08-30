@@ -1,6 +1,5 @@
 package com.myrpggame.Utils.PlayerMovement;
 
-import com.myrpggame.Enum.PlayerState;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 
@@ -9,9 +8,9 @@ import java.util.Set;
 public class PlayerMovement {
 
     private final ImageView player;
-    private final double alturaSala;
+    private double alturaChao; // chão da fase
 
-
+    private double velocidadePlayer;
 
     private final Set<KeyCode> pressedKeys;
 
@@ -35,16 +34,15 @@ public class PlayerMovement {
 
     private boolean bloqueado = false;
 
-
-    public Set<KeyCode> getPressedKeys() {
-        return pressedKeys;
-    }
-
-    public PlayerMovement(ImageView player, double alturaSala, Set<KeyCode> pressedKeys , int currentFrame) {
+    public PlayerMovement(ImageView player, double alturaChao, Set<KeyCode> pressedKeys, int currentFrame) {
         this.player = player;
-        this.alturaSala = alturaSala;
+        this.alturaChao = alturaChao;
         this.pressedKeys = pressedKeys;
         this.currentFrame = currentFrame;
+    }
+
+    public void setAlturaChao(double alturaChao) {
+        this.alturaChao = alturaChao;
     }
 
     public void aplicarGravidade() {
@@ -53,7 +51,7 @@ public class PlayerMovement {
             player.setTranslateY(player.getTranslateY() + velocidadeY);
         }
 
-        double chao = alturaSala - player.getBoundsInParent().getHeight();
+        double chao = alturaChao - player.getBoundsInParent().getHeight();
         if (player.getTranslateY() > chao) {
             player.setTranslateY(chao);
             velocidadeY = 0;
@@ -76,38 +74,32 @@ public class PlayerMovement {
     }
 
     public void processarMovimento() {
-        if (dashing) return;
-        if (bloqueado) return;
+        if (dashing || bloqueado) return;
 
-        boolean moving = false;
-        boolean lookingDownUp = false;
+        velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 10 : 5;
 
-        // Horizontal
-        double velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 10 : 5;
         if (pressedKeys.contains(KeyCode.A)) {
             if (player.getScaleX() < 0) player.setScaleX(-player.getScaleX());
             player.setTranslateX(player.getTranslateX() - velocidadePlayer);
             facingRight = false;
-            moving = true;
         }
         if (pressedKeys.contains(KeyCode.D)) {
             if (player.getScaleX() > 0) player.setScaleX(-player.getScaleX());
             player.setTranslateX(player.getTranslateX() + velocidadePlayer);
             facingRight = true;
-            moving = true;
         }
     }
 
     public void processarDash(long now) {
         if (dashing) {
             if (now - dashStartTime < DASH_DURATION) {
-                velocidadeY = 0; // não deixa pular durante dash
+                velocidadeY = 0;
                 player.setTranslateX(player.getTranslateX() + dashVelocidade);
             } else {
                 dashing = false;
                 gravidadeAtivo = true;
-                dashVelocidade = 0; // fim do dash: inicia cooldown
-                lastDashTime = now; // só volta pro estado correto
+                dashVelocidade = 0;
+                lastDashTime = now;
             }
         }
         if (!canDash && !pressedKeys.contains(KeyCode.Q) && now - lastDashTime >= DASH_COOLDOWN) {
@@ -135,23 +127,17 @@ public class PlayerMovement {
     }
 
     public boolean onGround() {
-        return player.getTranslateY() >= alturaSala - player.getBoundsInParent().getHeight();
+        return player.getTranslateY() >= alturaChao - player.getBoundsInParent().getHeight();
     }
 
-    public static boolean isFacingRight() {
-        return facingRight;
+    public double getVelocidadePlayer() {
+        return velocidadePlayer;
     }
 
-    public boolean isDashing() {
-        return dashing;
-    }
+    public static boolean isFacingRight() { return facingRight; }
+    public boolean isDashing() { return dashing; }
 
-    public void bloquearMovimento() {
-        bloqueado = true;
-    }
-
-    public void desbloquearMovimento() {
-        bloqueado = false;
-    }
+    public void bloquearMovimento() { bloqueado = true; }
+    public void desbloquearMovimento() { bloqueado = false; }
 
 }

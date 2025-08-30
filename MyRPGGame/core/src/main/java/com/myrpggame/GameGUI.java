@@ -1,11 +1,12 @@
 package com.myrpggame;
 
-import com.myrpggame.Config.GameResolution.GameResolution;
-import com.myrpggame.Models.Inimigo;
+import com.myrpggame.Models.Fase;
+import com.myrpggame.Models.GerenciadorDeFase;
 import com.myrpggame.Models.Player;
 import com.myrpggame.Utils.GameLoop;
-
 import com.myrpggame.Utils.HUDVida;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
@@ -14,8 +15,8 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
-
 import javafx.stage.Stage;
+
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -27,71 +28,86 @@ public class GameGUI {
 
     private final Scene scene;
     private final Set<KeyCode> pressedKeys = new HashSet<>();
-
     private final ImageView player;
-    private final Pane root;
+    private final Pane gameWorld;
+    private final VBox hudContainer;
     private final VBox pauseMenu;
-    private int salaAtual = 0;
 
-    Inimigo inimigo = new Inimigo(400, 200, 40, 10);
-
-    public GameGUI(Stage stage, double larguraSala, double alturaSala) {
+    public GameGUI(Stage stage) {
         MenuGUI menuGUI = new MenuGUI(stage);
+
+        // Player
         Image knightAFK = new Image(
                 Objects.requireNonNull(getClass().getResource("/assets/KnightAFK_1.png")).toExternalForm()
         );
         player = new ImageView(knightAFK);
-        player.setTranslateX(100);
-        player.setTranslateY(alturaSala - knightAFK.getHeight());
+
+        // Game World (móvel com a câmera)
+        gameWorld = new Pane();
+        gameWorld.getChildren().add(player);
+
+        // Player e HUD
+        Player personagem = new Player(knightAFK, 100, 0);
+        HUDVida hudVida = new HUDVida(personagem);
+
+        // HUD fixo
+        hudContainer = new VBox();
+        hudContainer.getChildren().add(hudVida.getBarraVida());
+        hudContainer.setAlignment(Pos.TOP_LEFT);  // fixa o HUD no canto superior esquerdo
+        hudContainer.setPadding(new Insets(20, 0, 0, 20)); // distancia do topo e da esquerda
 
 
 
 
-        root = new Pane(player);
 
-//        Barra de vida do Jogador
-        Player player1 = new Player(knightAFK , player.getLayoutX(), player.getLayoutY());
-        HUDVida hudVida = new HUDVida(player1);
-        root.getChildren().add(hudVida.getBarraVida());
-
-        // 🔹 Menu de pausa (overlay)
+        // Menu de pausa
         pauseMenu = new VBox(20);
         pauseMenu.setStyle("-fx-background-color: rgba(0,0,0,0.7); -fx-alignment: center; -fx-padding: 40;");
         pauseMenu.setVisible(false);
-        pauseMenu.setPrefSize(larguraSala, alturaSala);
+        pauseMenu.setPrefSize(getLargura(), getAltura());
 
         Button continuar = new Button("Continuar");
         Button voltarMenu = new Button("Voltar ao Menu");
-
         continuar.setOnAction(e -> pauseMenu.setVisible(false));
         voltarMenu.setOnAction(e -> stage.setScene(menuGUI.getScene()));
-
         pauseMenu.getChildren().addAll(continuar, voltarMenu);
 
-        // 🔹 Container com jogo + menu sobreposto
-        StackPane container = new StackPane(root, pauseMenu);
-        scene = new Scene(container , getLargura(), getAltura() );
+        // Container principal
+        StackPane container = new StackPane();
+        container.getChildren().addAll(gameWorld, hudContainer, pauseMenu);
 
-        // 🔹 Captura teclas
-        GameLoop gameLoop = new GameLoop(player, root, pauseMenu, pressedKeys, alturaSala , larguraSala);
+        // Scene
+        scene = new Scene(container, getLargura(), getAltura());
+
+        // GameLoop
+        GerenciadorDeFase gerenciador = new GerenciadorDeFase();
+        Fase primeiraFase = gerenciador.getFaseAtual();
+        player.setTranslateX(100);
+        player.setTranslateY(primeiraFase.getAltura() - knightAFK.getHeight());
+
+        GameLoop gameLoop = new GameLoop(player, gameWorld, pauseMenu, pressedKeys, hudVida);
+        gameLoop.start();
+
+
+
+
+        // Controles
         scene.setOnKeyPressed(event -> {
             pressedKeys.add(event.getCode());
             if (event.getCode() == KeyCode.ESCAPE) pauseMenu.setVisible(!pauseMenu.isVisible());
             if (event.getCode() == KeyCode.Q) gameLoop.getPlayerMovement().tentarDash();
         });
-        // No construtor de GameUtils, adicione algo assim:
+
         scene.setOnMousePressed(event -> {
-            if (event.isPrimaryButtonDown()) { // botão esquerdo
+            if (event.isPrimaryButtonDown()) {
                 gameLoop.getPlayerAttack().tentarAtaque();
             }
         });
-        scene.setOnKeyReleased(event -> pressedKeys.remove(event.getCode()));
-        gameLoop.start();
 
+        scene.setOnKeyReleased(event -> pressedKeys.remove(event.getCode()));
     }
 
     public Scene getScene() {
         return scene;
     }
 }
-

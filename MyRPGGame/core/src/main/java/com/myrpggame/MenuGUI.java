@@ -40,7 +40,7 @@ public class MenuGUI {
     }
 
     private static void mostrarJogo(Stage stage) {
-        GameGUI gameView = new GameGUI(stage, getLargura() , getAltura());
+        GameGUI gameView = new GameGUI(stage);
         GameResolution.changeScene(stage , gameView.getScene());
     }
     private static void mostrarConfiguracoes(Stage stage) {
