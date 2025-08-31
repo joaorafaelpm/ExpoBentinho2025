@@ -2,6 +2,7 @@ package com.myrpggame.Utils.PlayerAnimation;
 
 import com.myrpggame.Config.ResourceLoader.ResourceLoader;
 import com.myrpggame.Enum.PlayerState;
+import com.myrpggame.Utils.PlayerMovement.PlayerMovement;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 
@@ -25,7 +26,6 @@ public class PlayerAnimation {
     private final ImageView player;
     private final Set<KeyCode> pressedKeys;
 
-    // Flags e tempos são passados do GameLoop
     private boolean morto;
     private boolean respawning;
     private boolean atacando;
@@ -34,11 +34,19 @@ public class PlayerAnimation {
     private long reviveStartTime;
 
     private PlayerState playerState;
+    private PlayerMovement playerMovement;
+
+    private int frameIdle = 0;
+    private int frameRunning = 0;
+    private int frameJumping = 0;
+    private int frameDashing = 0;
+    private int frameAttacking = 0;
+
 
     public PlayerAnimation(double larguraSala, double alturaSala,
                            boolean morto, boolean respawning, boolean atacando, boolean dashando,
                            long morteStartTime, long reviveStartTime,
-                           Set<KeyCode> pressedKeys, ImageView player , int currentFrame) {
+                           Set<KeyCode> pressedKeys, ImageView player , int currentFrame , PlayerMovement playerMovement) {
         this.larguraSala = larguraSala;
         this.alturaSala = alturaSala;
         this.morto = morto;
@@ -50,6 +58,7 @@ public class PlayerAnimation {
         this.pressedKeys = pressedKeys;
         this.player = player;
         this.currentFrame = currentFrame;
+        this.playerMovement = playerMovement ;
     }
 
     public void atualizarFlags(boolean morto, boolean respawning, boolean atacando, boolean dashando,
@@ -74,9 +83,14 @@ public class PlayerAnimation {
 
         if (atacando) playerState = PlayerState.ATTACKING;
         else if (dashando) playerState = PlayerState.DASHING;
+        else if (pressedKeys.contains(KeyCode.SPACE) || playerMovement.isPulando()) {
+            playerState = PlayerState.JUMPING;
+        }
         else if (pressedKeys.contains(KeyCode.W)) playerState = PlayerState.LOOKING_UP;
         else if (pressedKeys.contains(KeyCode.S)) playerState = PlayerState.LOOKING_DOWN;
-        else if (pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D)) playerState = PlayerState.RUNNING;
+        else if (!playerMovement.isPulando() && (pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D))) {
+            playerState = PlayerState.RUNNING;
+        }
         else playerState = PlayerState.IDLE;
     }
 
@@ -102,45 +116,60 @@ public class PlayerAnimation {
             case LOOKING_DOWN -> animLookingDown();
             case DEAD -> animDead(now);
             case RESPAWNING -> animRespawning(now);
+            case JUMPING -> animJumping(now, playerMovement);
         }
 
         lastUpdate = now;
     }
 
-    // ===== Métodos privados =====
+    // ===== Método utilitário =====
+    private void aplicarDirecao(boolean usarDirecaoPlayer) {
+        if (usarDirecaoPlayer) {
+            player.setScaleX(isFacingRight() ? -1 : 1);
+        }
+    }
+
     private void animIdle() {
-        currentFrame = (currentFrame + 1) % 3;
-        if (currentFrame == 0) currentFrame = 1;
-        player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightAFK_%d.png", currentFrame)));
-        player.setScaleX(isFacingRight() ? -1 : 1);
+        frameIdle = (frameIdle + 1) % 3;
+        if (frameIdle == 0) frameIdle = 1;
+        player.setImage(ResourceLoader.loadImage(
+                String.format("/assets/KnightAFK_%d.png", frameIdle)));
+        aplicarDirecao(true);
     }
 
     private void animRunning() {
-        currentFrame = (currentFrame + 1) % 5;
-        if (currentFrame == 0) currentFrame = 1;
-        player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightSprint_%d.png", currentFrame)));
+        if (!playerMovement.isPulando()) {
+            frameRunning = (frameRunning + 1) % 5;
+            if (frameRunning == 0) frameRunning = 1;
+            player.setImage(ResourceLoader.loadImage(
+                    String.format("/assets/KnightSprint_%d.png", frameRunning)));
+            aplicarDirecao(true); // só aplica direção no chão
+        }
     }
 
     private void animDashing() {
-        if (currentFrame == 0) currentFrame = 1;
-        if (currentFrame < 4) currentFrame++;
-        player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightDash_%d.png", currentFrame)));
+        frameDashing = (frameDashing + 1) % 4;
+        if (frameDashing == 0) frameDashing = 1;
+        player.setImage(ResourceLoader.loadImage(
+                String.format("/assets/KnightDash_%d.png", frameDashing)));
+        if (playerMovement.onGround()) aplicarDirecao(true); // só aplica direção se estiver no chão
     }
 
     private void animAttacking() {
         if (currentFrame == 0 || currentFrame == 4) currentFrame = 1;
         if (currentFrame < 3) currentFrame++;
         player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightLightAttack_%d.png", currentFrame)));
+        aplicarDirecao(true);
     }
 
     private void animLookingUp() {
         player.setImage(ResourceLoader.loadImage("/assets/KnightLookUp.png"));
-        player.setScaleX(isFacingRight() ? -1 : 1);
+        aplicarDirecao(true);
     }
 
     private void animLookingDown() {
         player.setImage(ResourceLoader.loadImage("/assets/KnightLookDown.png"));
-        player.setScaleX(isFacingRight() ? -1 : 1);
+        aplicarDirecao(true);
     }
 
     private void animDead(long now) {
@@ -162,14 +191,13 @@ public class PlayerAnimation {
     private void animRespawning(long now) {
         long elapsedNanos = now - reviveStartTime;
 
-        // ===== FASE 1: frames 1–8 =====
         if (elapsedNanos < REVIVE_PHASE1_DURATION) {
             long frameDurationPhase1 = REVIVE_PHASE1_DURATION / REVIVE_PHASE1_FRAMES;
             int frameIndex = (int) (elapsedNanos / frameDurationPhase1) + 1;
             if (frameIndex > REVIVE_PHASE1_FRAMES) frameIndex = REVIVE_PHASE1_FRAMES;
 
             player.setImage(ResourceLoader.loadImage(String.format("/assets/reviving/PlayerReviving_%d.png", frameIndex)));
-            player.setScaleX(isFacingRight() ? 1 : -1);
+            aplicarDirecao(true);
 
             double t = (double) elapsedNanos / REVIVE_PHASE1_DURATION;
             t = 1 - Math.pow(1 - t, 2);
@@ -178,21 +206,40 @@ public class PlayerAnimation {
             double endY = alturaSala - alturaImagem;
             player.setTranslateY(startY + (endY - startY) * t);
             player.setTranslateX(40);
-        }
-        // ===== FASE 2: frames 9–11 =====
-        else if (elapsedNanos < REVIVE_PHASE1_DURATION + REVIVE_PHASE2_DURATION) {
+        } else if (elapsedNanos < REVIVE_PHASE1_DURATION + REVIVE_PHASE2_DURATION) {
             long phase2Elapsed = elapsedNanos - REVIVE_PHASE1_DURATION;
             long frameDurationPhase2 = REVIVE_PHASE2_DURATION / REVIVE_PHASE2_FRAMES;
             int frameIndex = 9 + (int) (phase2Elapsed / frameDurationPhase2);
             if (frameIndex > 11) frameIndex = 11;
 
             player.setImage(ResourceLoader.loadImage(String.format("/assets/reviving/PlayerReviving_%d.png", frameIndex)));
-            player.setScaleX(isFacingRight() ? 1 : -1);
+            aplicarDirecao(true);
 
             double alturaImagem = player.getImage().getHeight();
             player.setTranslateY(alturaSala - alturaImagem);
             player.setTranslateX(40);
         }
-        // Fim da animação → o GameLoop deve limpar respawning
+    }
+
+    private void animJumping(long now, PlayerMovement movement) {
+        double chao = movement.getAlturaChao() - player.getImage().getHeight();
+        double velocidadeY = movement.getVelocidadeY();
+
+        if (velocidadeY < 0) {
+            if (currentFrame == 0 || currentFrame > 10) currentFrame = 1;
+            else currentFrame++;
+        } else {
+            if (currentFrame < 11) currentFrame = 11;
+            else currentFrame = currentFrame == 11 ? 12 : 11;
+        }
+
+        player.setImage(ResourceLoader.loadImage(
+                String.format("/assets/jumping/PlayerJumping_%d.png", currentFrame)));
+
+        aplicarDirecao(true); // sempre respeita direção do player no ar
+
+        if (player.getTranslateY() > chao) {
+            player.setTranslateY(chao);
+        }
     }
 }

@@ -1,9 +1,6 @@
 package com.myrpggame.Utils;
 
-import com.myrpggame.Models.Fase;
-import com.myrpggame.Models.GerenciadorDeFase;
-import com.myrpggame.Models.Inimigo;
-import com.myrpggame.Models.Player;
+import com.myrpggame.Models.*;
 import com.myrpggame.Utils.PlayerAnimation.PlayerAnimation;
 import com.myrpggame.Utils.PlayerAttack.PlayerAttack;
 import com.myrpggame.Utils.PlayerCamera.Camera;
@@ -24,7 +21,7 @@ public class GameLoop extends AnimationTimer {
     private final ImageView player;
     private final Pane gameWorld;
     private final Pane pauseMenu;
-    private final HUDVida hudVida;
+    private HUDVida hudVida;
     private final Camera camera;
 
     private final Player personagem;
@@ -33,7 +30,6 @@ public class GameLoop extends AnimationTimer {
     private final PlayerAnimation playerAnimation;
 
     private final List<Inimigo> inimigos = new ArrayList<>();
-    private final List<Integer> inimigosMortosPorFase = new ArrayList<>();
     private final GerenciadorDeFase gerenciadorDeFase = new GerenciadorDeFase();
 
     private boolean morto = false;
@@ -55,19 +51,17 @@ public class GameLoop extends AnimationTimer {
         this.hudVida = hudVida;
 
         Fase faseAtual = gerenciadorDeFase.getFaseAtual();
-        double alturaFase = faseAtual.getAltura();
-        double larguraFase = faseAtual.getLargura();
 
         // Inicializa câmera
-        this.camera = new Camera(getLargura(), getAltura(), larguraFase, alturaFase);
+        this.camera = new Camera(getLargura(), getAltura(), faseAtual.getLargura(), faseAtual.getAltura());
 
         // Inicializa player e sistemas
         this.personagem = hudVida.getPlayer();
-        this.playerMovement = new PlayerMovement(player, alturaFase, pressedKeys, 0);
-        this.playerAttack = new PlayerAttack(player, gameWorld, personagem, 0, inimigosMortosPorFase);
-        this.playerAnimation = new PlayerAnimation(getLargura(), alturaFase, morto, respawning,
+        this.playerMovement = new PlayerMovement(player, faseAtual.getAltura(), pressedKeys, 0);
+        this.playerAttack = new PlayerAttack(player, gameWorld, personagem, 0, new ArrayList<>());
+        this.playerAnimation = new PlayerAnimation(getLargura(), faseAtual.getAltura(), morto, respawning,
                 playerAttack.isAtacando(), playerMovement.isDashing(), morteStartTime,
-                reviveStartTime, pressedKeys, player, 0);
+                reviveStartTime, pressedKeys, player, 0 , playerMovement);
 
         carregarSala();
     }
@@ -118,7 +112,8 @@ public class GameLoop extends AnimationTimer {
 
     private void atualizarInimigos(long now) {
         for (Inimigo inimigo : new ArrayList<>(inimigos)) {
-            inimigo.seguir(player.getTranslateX(), player.getTranslateY());
+            inimigo.atualizar(now);
+            inimigo.seguir(player.getTranslateX(), player.getTranslateY() , now);
             if (player.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())
                     && now - lastEnemyHitTime >= ENEMY_ATTACK_COOLDOWN) {
                 hudVida.tomarDano(inimigo.getDano(), personagem);
@@ -135,47 +130,54 @@ public class GameLoop extends AnimationTimer {
     }
 
     private void iniciarRespawn(long now) {
-        personagem.recuperarVida(personagem.getVidaMaxima());
         respawning = true;
         morto = false;
         reviveStartTime = now;
+
+        // Recupera a vida do personagem
+        hudVida.resetarVida();
+
         carregarSala();
         posicionarPlayerNoInicio();
     }
+
 
     private void carregarSala() {
         Fase fase = gerenciadorDeFase.getFaseAtual();
 
         gameWorld.getChildren().clear();
-        inimigos.clear();
 
-        // Define tamanho do gameWorld
-        gameWorld.setPrefWidth(fase.getLargura());
-        gameWorld.setPrefHeight(fase.getAltura());
+        // Inicializa fase
+        fase.inicializar();
 
-        // Fundo
-        javafx.scene.shape.Rectangle fundo = new javafx.scene.shape.Rectangle(fase.getLargura(), fase.getAltura());
-        fundo.setFill(fase.getCorFundo());
-        gameWorld.getChildren().add(fundo);
+        // Adiciona root da fase
+        gameWorld.getChildren().add(fase.getRoot());
 
-        // Player
+        // Adiciona player
         gameWorld.getChildren().add(player);
 
-        // Inimigos
-        int quantidade = fase.getQuantidadeInimigos();
-        for (int i = 0; i < quantidade; i++) {
-            if (inimigosMortosPorFase.contains(i)) continue;
+        // Inicializa inimigos usando GerenciadorDeInimigo
+        GerenciadorDeInimigo gerInimigos = fase.getGerenciadorDeInimigo();
+        gerInimigos.inicializar();
 
-            double x = fase.getLargura() - 100 - (i * 100);
-            double y = fase.getAltura() - 100;
-            Inimigo novo = new Inimigo(x, y, 30, 3, i);
-            gameWorld.getChildren().add(novo.getCorpo());
-            inimigos.add(novo);
+        // Remove inimigos mortos caso a fase seja aleatória
+        if (fase instanceof com.myrpggame.Fases.FasePrisioneiro) {
+            gerInimigos.getInimigos().removeIf(i -> ((com.myrpggame.Fases.FasePrisioneiro) fase).getInimigosMortos().contains(i.getId()));
+        } else if (fase instanceof com.myrpggame.Fases.FaseFloresta) {
+            gerInimigos.getInimigos().removeIf(i -> ((com.myrpggame.Fases.FaseFloresta) fase).getInimigosMortos().contains(i.getId()));
+        }
+
+        inimigos.clear();
+        inimigos.addAll(gerInimigos.getInimigos());
+
+        // Adiciona inimigos ao gameWorld
+        for (Inimigo inimigo : inimigos) {
+            gameWorld.getChildren().add(inimigo.getCorpo());
         }
 
         playerAttack.setInimigos(inimigos);
 
-        // Atualiza câmera para tamanho da fase
+        // Atualiza câmera
         camera.setPhaseSize(fase.getLargura(), fase.getAltura());
         camera.update(player.getTranslateX(), player.getTranslateY());
     }

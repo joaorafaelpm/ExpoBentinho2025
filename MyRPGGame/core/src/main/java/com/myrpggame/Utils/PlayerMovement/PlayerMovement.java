@@ -52,25 +52,28 @@ public class PlayerMovement {
         }
 
         double chao = alturaChao - player.getBoundsInParent().getHeight();
-        if (player.getTranslateY() > chao) {
+
+        // Se encostou no chão, termina o pulo
+        if (player.getTranslateY() >= chao) {
             player.setTranslateY(chao);
             velocidadeY = 0;
-            pulando = false;
+            pulando = false; // Só aqui, quando realmente toca o chão
         }
     }
 
     public void processarPulo(long now) {
-        if (pressedKeys.contains(KeyCode.SPACE)) {
-            if (!pulando && onGround()) {
-                pulando = true;
-                tempoPuloInicio = now;
-                velocidadeY = impulsoPulo;
-            } else if (pulando && now - tempoPuloInicio < tempoMaxPulo) {
-                velocidadeY = impulsoPulo;
-            }
-        } else {
-            pulando = false;
+        // Inicia o pulo apenas se o player estiver no chão
+        if (pressedKeys.contains(KeyCode.SPACE) && !pulando && onGround()) {
+            pulando = true;
+            tempoPuloInicio = now;
+            velocidadeY = impulsoPulo;
         }
+
+        // Mantém o impulso enquanto a tecla estiver pressionada e não ultrapassou o tempo máximo
+        if (pulando && pressedKeys.contains(KeyCode.SPACE) && now - tempoPuloInicio < tempoMaxPulo) {
+            velocidadeY = impulsoPulo;
+        }
+
     }
 
     public void processarMovimento() {
@@ -79,14 +82,12 @@ public class PlayerMovement {
         velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 10 : 5;
 
         if (pressedKeys.contains(KeyCode.A)) {
-            if (player.getScaleX() < 0) player.setScaleX(-player.getScaleX());
             player.setTranslateX(player.getTranslateX() - velocidadePlayer);
-            facingRight = false;
+            facingRight = false;  // apenas atualiza a direção
         }
         if (pressedKeys.contains(KeyCode.D)) {
-            if (player.getScaleX() > 0) player.setScaleX(-player.getScaleX());
             player.setTranslateX(player.getTranslateX() + velocidadePlayer);
-            facingRight = true;
+            facingRight = true;   // apenas atualiza a direção
         }
     }
 
@@ -130,12 +131,13 @@ public class PlayerMovement {
         return player.getTranslateY() >= alturaChao - player.getBoundsInParent().getHeight();
     }
 
-    public double getVelocidadePlayer() {
-        return velocidadePlayer;
-    }
-
     public static boolean isFacingRight() { return facingRight; }
+    public boolean isPulando() { return pulando; }
+    public void setPulando(boolean pulando) { this.pulando = pulando; }
     public boolean isDashing() { return dashing; }
+    public double getVelocidadeY () {return velocidadeY ;}
+    public double getAlturaChao () {return alturaChao ;}
+
 
     public void bloquearMovimento() { bloqueado = true; }
     public void desbloquearMovimento() { bloqueado = false; }

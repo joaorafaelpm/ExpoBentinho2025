@@ -1,38 +1,44 @@
 package com.myrpggame.Fases;
 
-import javafx.scene.image.Image;
+import com.myrpggame.Config.GameResolution.GameResolution;
+import com.myrpggame.Enum.EnemyType;
+import com.myrpggame.Models.Fase;
+import com.myrpggame.Models.GerenciadorDeInimigo;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
-public class FaseChefao {
+import java.util.Objects;
 
-    private final Pane root = new Pane();
+public class FaseChefao extends Fase {
+
+    private GerenciadorDeInimigo gerInimigos;
 
     public FaseChefao() {
-        root.setPrefSize(1900, 600);
-        criarFase();
+        super(2000, GameResolution.getAltura());
+        setQuantidadeInimigos(1); // Apenas o boss
     }
 
-    private void criarFase() {
-        // Fundo
-        Rectangle fundo = new Rectangle(1900, 600, Color.DIMGRAY);
-        root.getChildren().add(fundo);
+    @Override
+    public void inicializar() {
+        double alturaChao = 50;
 
         // Chão
-        Rectangle chao = new Rectangle(1900, 50, Color.DARKRED);
-        chao.setTranslateY(550);
+        Rectangle chao = new Rectangle(getLargura(), alturaChao, Color.DARKRED);
+        chao.setTranslateY(getAltura() - alturaChao);
         root.getChildren().add(chao);
 
-        // Chefão
-        ImageView chefe = new ImageView(new Image(getClass().getResource("/assets/inimigos/chefe.png").toExternalForm()));
-        chefe.setTranslateX(900);
-        chefe.setTranslateY(450);
-        root.getChildren().add(chefe);
+        // Fundo
+        Rectangle fundo = new Rectangle(getLargura(), getAltura() - alturaChao, Color.DIMGRAY);
+        root.getChildren().add(0, fundo);
+
+        gerInimigos = new GerenciadorDeInimigo(this);
+        gerInimigos.inicializar();
     }
 
-    public Pane getRoot() {
-        return root;
+    @Override
+    public GerenciadorDeInimigo getGerenciadorDeInimigo() {
+        return gerInimigos;
     }
+
 }

@@ -1,7 +1,6 @@
 package com.myrpggame;
 
-import com.myrpggame.Models.Fase;
-import com.myrpggame.Models.GerenciadorDeFase;
+import com.myrpggame.Models.GerenciadorDeFase ;
 import com.myrpggame.Models.Player;
 import com.myrpggame.Utils.GameLoop;
 import com.myrpggame.Utils.HUDVida;
@@ -81,9 +80,8 @@ public class GameGUI {
 
         // GameLoop
         GerenciadorDeFase gerenciador = new GerenciadorDeFase();
-        Fase primeiraFase = gerenciador.getFaseAtual();
         player.setTranslateX(100);
-        player.setTranslateY(primeiraFase.getAltura() - knightAFK.getHeight());
+        player.setTranslateY(gerenciador.getFaseAtual().getAltura() - knightAFK.getHeight());
 
         GameLoop gameLoop = new GameLoop(player, gameWorld, pauseMenu, pressedKeys, hudVida);
         gameLoop.start();

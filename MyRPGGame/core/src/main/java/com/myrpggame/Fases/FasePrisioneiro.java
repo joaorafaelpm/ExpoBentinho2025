@@ -1,49 +1,82 @@
 package com.myrpggame.Fases;
 
+import com.myrpggame.Config.GameResolution.GameResolution;
+import com.myrpggame.Enum.EnemyType;
+import com.myrpggame.Models.Fase;
+import com.myrpggame.Models.GerenciadorDeInimigo;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
-public class FasePrisioneiro {
+import java.lang.reflect.Field;
+import java.util.HashSet;
+import java.util.Objects;
+import java.util.Random;
+import java.util.Set;
 
-    private final Pane root = new Pane();
+public class FasePrisioneiro extends Fase {
+
+    private GerenciadorDeInimigo gerInimigos;
+    private Set<Integer> inimigosMortos = new HashSet<>();
 
     public FasePrisioneiro() {
-        root.setPrefSize(2000, 600);
-        criarFase();
+        super(6000, GameResolution.getAltura());
+
+        // Quantidade aleatória de inimigos entre 3 e 6
+        Random rand = new Random();
+        setQuantidadeInimigos(1 + rand.nextInt(10));
     }
 
-    private void criarFase() {
-        // Fundo
-        Rectangle fundo = new Rectangle(2000, 600, Color.BLACK);
-        root.getChildren().add(fundo);
+    @Override
+    public void inicializar() {
+        double alturaChao = 50;
 
-        // Chão principal
-        Rectangle chao = new Rectangle(2000, 50, Color.DARKGRAY);
-        chao.setTranslateY(550);
-        root.getChildren().add(chao);
+        Image img = new Image(
+                Objects.requireNonNull(getClass().getResource("/assets/background/output.png")).toExternalForm()
+        );
 
-        // Plataformas
-        Rectangle plat1 = new Rectangle(150, 20, Color.GRAY);
-        plat1.setTranslateX(400);
-        plat1.setTranslateY(450);
-        root.getChildren().add(plat1);
+        double larguraDesejada = getLargura(); // largura total que quer mostrar
+        double alturaTela = getAltura();
 
-        Rectangle plat2 = new Rectangle(150, 20, Color.GRAY);
-        plat2.setTranslateX(900);
-        plat2.setTranslateY(400);
-        root.getChildren().add(plat2);
+// Quantas vezes precisamos repetir a imagem
+        int repeats = (int) Math.ceil(larguraDesejada / img.getWidth());
 
-        // Inimigo tutorial
-        ImageView inimigo = new ImageView(new Image(getClass().getResource("/assets/inimigo_tutorial.png").toExternalForm()));
-        inimigo.setTranslateX(850);
-        inimigo.setTranslateY(520);
-        root.getChildren().add(inimigo);
+        for (int i = 0; i < repeats; i++) {
+            ImageView imageView = new ImageView(img);
+            imageView.setFitHeight(alturaTela);  // mantém altura da tela
+            imageView.setPreserveRatio(false);   // força preencher eixo Y
+            imageView.setTranslateX(i * img.getWidth()); // posiciona horizontalmente
+            root.getChildren().add( imageView);
+        }
+
+        // Inicializa inimigos fixos
+        gerInimigos = new GerenciadorDeInimigo(this);
+        gerInimigos.inicializar();
     }
 
-    public Pane getRoot() {
-        return root;
+
+    public GerenciadorDeInimigo getGerenciadorDeInimigos() {
+        return gerInimigos;
+    }
+
+    public Set<Integer> getInimigosMortos() {
+        return inimigosMortos;
+    }
+
+    @Override
+    public GerenciadorDeInimigo getGerenciadorDeInimigo() {
+        return gerInimigos;
+    }
+
+    @Override
+    public void setQuantidadeInimigos(int quantidade) {
+        try {
+            Field field = Fase.class.getDeclaredField("quantidadeInimigos");
+            field.setAccessible(true);
+            field.set(this, quantidade);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }

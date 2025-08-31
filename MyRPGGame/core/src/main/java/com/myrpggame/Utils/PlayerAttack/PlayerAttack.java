@@ -81,8 +81,14 @@ public class PlayerAttack {
                     && now - lastPlayerHitTime >= PLAYER_ATTACK_COOLDOWN) {
 
                 inimigo.tomarDano(personagem.getDano());
+
+                // Calcula direção para o knockback
+                double dx = inimigo.getCorpo().getX() - player.getTranslateX();
+                double dy = 0; // para horizontal apenas
+                if (inimigo.getCorpo().getY() < player.getTranslateY()) dy = -0.5; // empurra levemente para cima
+                inimigo.aplicarKnockback(dx >= 0 ? 10 : -10, dy, 1.0);
+
                 lastPlayerHitTime = now;
-                System.out.println("ATACOU INIMIGO ============================================");
 
                 if (inimigo.estaMorto()) {
                     root.getChildren().remove(inimigo.getCorpo());
@@ -107,7 +113,9 @@ public class PlayerAttack {
             ataqueHitbox.setTranslateY(player.getTranslateY() - 40);
             ataqueHitbox.setImage(ResourceLoader.loadImage("/assets/SlashLightAttack.png"));
             if (!root.getChildren().contains(ataqueHitbox)) root.getChildren().add(ataqueHitbox);
-        } else {
+        }
+
+        else {
             root.getChildren().remove(ataqueHitbox);
         }
     }
