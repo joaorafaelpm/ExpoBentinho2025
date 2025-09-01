@@ -60,8 +60,11 @@ public class GerenciadorDeInimigo {
 
             // Imagem
             ImageView imagem = switch (tipo) {
-                case COMMON, FLYING,  ARCHER -> new ImageView(
+                case COMMON, ARCHER -> new ImageView(
                         Objects.requireNonNull(getClass().getResource("/assets/KnightAFK_1.png")).toExternalForm()
+                );
+                case FLYING -> new ImageView(
+                        Objects.requireNonNull(getClass().getResource("/assets/inimigos/flying/FlyingRunning_1.png")).toExternalForm()
                 );
                 case BOSS -> new ImageView(
                         Objects.requireNonNull(getClass().getResource("/assets/inimigos/inimigo-tutorial.jpg")).toExternalForm()

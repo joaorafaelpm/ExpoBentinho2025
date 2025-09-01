@@ -118,7 +118,6 @@ public class Inimigo {
         }
     }
 
-
     public void atualizarDirecao(double playerX) {
         double dx = playerX - corpo.getX();
         if (dx != 0) {

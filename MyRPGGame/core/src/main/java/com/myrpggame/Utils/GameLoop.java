@@ -41,9 +41,6 @@ public class GameLoop extends AnimationTimer {
     private long morteStartTime = 0;
     private long reviveStartTime = 0;
 
-    private static final long ENEMY_ATTACK_COOLDOWN = 1_000_000_000; // 1s
-    private long lastEnemyHitTime = 0;
-
     private static final long MORTE_DURATION = 1_500_000_000; // 1,5s
     private static final long REVIVE_TOTAL_DURATION = 5_000_000_000L; // 8s
 
@@ -115,39 +112,37 @@ public class GameLoop extends AnimationTimer {
         }
     }
 
-
-
     private void atualizarInimigos(long now) {
         for (Inimigo inimigo : new ArrayList<>(inimigos)) {
             inimigo.atualizar(now);
-            inimigo.seguir(player.getTranslateX(), player.getTranslateY(), now);
             inimigo.atualizarDirecao(player.getTranslateX());
 
-            // Atualiza ataque do inimigo
             EnemyAttack ataque = inimigo.getAttack();
             if (ataque != null) {
-                ataque.processarAtaque(now, hudVida, player);
+                // Para inimigos voadores
+                if (inimigo.getEnemyType() == EnemyType.FLYING) {
+                    if (!ataque.isAtacando()) {
+                        inimigo.seguir(player.getTranslateX(), player.getTranslateY(), now);
+                    }
+                } else {
+                    // Inimigos normais continuam seguindo
+                    inimigo.seguir(player.getTranslateX(), player.getTranslateY(), now);
+                }
 
-                // Atualiza animação de ataque
-                if (inimigo.getEnemyType() == EnemyType.TANK && inimigo.getAnimation() != null) {
-                    inimigo.getAnimation().atualizarEstado(inimigo); // define ATTACKING ou IDLE
+
+                // Processa ataque
+                ataque.processarInimigo(now, hudVida, player);
+
+                if (inimigo.getAnimation() != null) {
+                    inimigo.getAnimation().atualizarEstado(inimigo);
                     inimigo.getAnimation().atualizarAnimacao(inimigo);
                 }
-            }
-
-            // Atualiza animação apenas para TANK
-            if (inimigo.getEnemyType() == EnemyType.TANK && inimigo.getAnimation() != null) {
-                inimigo.getAnimation().atualizarAnimacao(inimigo);
             }
 
             if (inimigo.estaMorto()) {
                 inimigos.remove(inimigo);
                 gameWorld.getChildren().remove(inimigo.getCorpo());
             }
-        }
-
-        if (inimigos.isEmpty() && !Player.isSalaConcluida(gerenciadorDeFase.getFaseAtual())) {
-            Player.concluirSala(gerenciadorDeFase.getFaseAtual());
         }
     }
 

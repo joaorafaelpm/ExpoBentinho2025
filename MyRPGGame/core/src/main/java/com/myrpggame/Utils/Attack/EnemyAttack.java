@@ -1,8 +1,5 @@
 package com.myrpggame.Utils.Attack;
 
-import com.myrpggame.Config.ResourceLoader.ResourceLoader;
-import com.myrpggame.Enum.EnemyState;
-import com.myrpggame.Enum.EnemyType;
 import com.myrpggame.Models.Inimigo;
 import com.myrpggame.Models.Player;
 import com.myrpggame.Utils.HUDVida;
@@ -11,57 +8,104 @@ import javafx.scene.image.ImageView;
 public class EnemyAttack {
 
     private final Inimigo inimigo;
-    private final ImageView ataqueHitbox = new ImageView();
+    private final Player personagem;
 
     private boolean atacando = false;
     private boolean atacandoEmCooldown = false;
-    private boolean bloqueado = false;
     private boolean danoAplicado = false;
 
-
     private long ataqueStartTime = 0;
-    private long lastAttackEndTime = 0;
-
     private long ataqueDuration;
     private long ataqueCooldown;
 
-    private Player personagem;
+    private double attackTargetX;
+    private double attackTargetY;
+    private boolean attackTargetSet = false;
 
-    public EnemyAttack(Inimigo inimigo , Player personagem) {
+    public EnemyAttack(Inimigo inimigo, Player personagem) {
         this.inimigo = inimigo;
         this.personagem = personagem;
         definirDuracoes();
     }
 
     private void definirDuracoes() {
-        // Define duração e cooldown com base no tipo
         switch (inimigo.getEnemyType()) {
-            case COMMON -> {
-                ataqueDuration = 400_000_000;     // 0.4s
-                ataqueCooldown = 1_500_000_000;   // 1.5s
-            }
-            case TANK -> {
-                ataqueDuration = 600_000_000;     // 0.6s
-                ataqueCooldown = 2_000_000_000;   // 2s
-            }
-            case FLYING -> {
-                ataqueDuration = 500_000_000;
-                ataqueCooldown = 1_800_000_000;
-            }
-            case ARCHER -> {
-                ataqueDuration = 700_000_000;
-                ataqueCooldown = 2_500_000_000L;
-            }
-            case BOSS -> {
-                ataqueDuration = 800_000_000;
-                ataqueCooldown = 3_000_000_000L;
+            case COMMON -> { ataqueDuration = 400_000_000; ataqueCooldown = 1_500_000_000; }
+            case TANK -> { ataqueDuration = 600_000_000; ataqueCooldown = 2_000_000_000; }
+            case FLYING -> { ataqueDuration = 1_500_000_000; ataqueCooldown = 1_800_000_000; }
+            case ARCHER -> { ataqueDuration = 700_000_000; ataqueCooldown = 2_500_000_000L; }
+            case BOSS -> { ataqueDuration = 800_000_000; ataqueCooldown = 3_000_000_000L; }
+        }
+    }
+
+    // =================== Processa cooldown ===================
+    private void processCooldown(long now) {
+        if (atacandoEmCooldown && !atacando) {
+            if (now - ataqueStartTime >= ataqueCooldown) {
+                atacandoEmCooldown = false; // cooldown acabou, pode atacar de novo
             }
         }
     }
 
-    public void tentarAtaque(long now) {
-        if (!bloqueado && !atacando && !atacandoEmCooldown) {
+    // =================== Método principal ===================
+    public void processarInimigo(long now, HUDVida hudVida, ImageView playerHitbox) {
+        // Atualiza cooldown sempre
+        processCooldown(now);
+
+        switch (inimigo.getEnemyType()) {
+            case FLYING -> processFlying(now, hudVida, playerHitbox);
+            default -> processDefault(now, hudVida, playerHitbox);
+        }
+    }
+
+    // =================== Inimigos voadores ===================
+    private void processFlying(long now, HUDVida hudVida, ImageView playerHitbox) {
+        if (!atacando) {
+            if (playerHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent()) && !atacandoEmCooldown) {
+                iniciarAtaqueFlying(now);
+                atacarFlying(hudVida, playerHitbox);
+            }
+        } else {
+            atacarFlying(hudVida, playerHitbox);
+        }
+    }
+
+    private void atacarFlying(HUDVida hudVida, ImageView playerHitbox) {
+        if (!atacando) return;
+
+        if (!danoAplicado && playerHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())) {
+            hudVida.tomarDano(inimigo.getDano(), personagem);
+            danoAplicado = true;
+        }
+
+        long now = System.nanoTime();
+        if (now - ataqueStartTime >= ataqueDuration) {
+            finalizarAtaque(now);
+        }
+    }
+
+    private void iniciarAtaqueFlying(long now) {
+        atacando = true;
+        atacandoEmCooldown = true;
+        danoAplicado = false;
+        ataqueStartTime = now;
+    }
+
+    // =================== Inimigos padrão ===================
+    private void processDefault(long now, HUDVida hudVida, ImageView playerHitbox) {
+        if (!atacando && playerHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent()) && !atacandoEmCooldown) {
             iniciarAtaque(now);
+        }
+
+        if (atacando) {
+            if (!danoAplicado && playerHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())) {
+                hudVida.tomarDano(inimigo.getDano(), personagem);
+                danoAplicado = true;
+            }
+
+            if (now - ataqueStartTime >= ataqueDuration) {
+                finalizarAtaque(now);
+            }
         }
     }
 
@@ -72,42 +116,19 @@ public class EnemyAttack {
         ataqueStartTime = now;
     }
 
-    public boolean podeAtacar(ImageView playerHitbox) {
-        // Use BoundsInParent para pegar posição real
-        double distanciaX = Math.abs(playerHitbox.getBoundsInParent().getCenterX() - inimigo.getCorpo().getBoundsInParent().getCenterX());
-        double distanciaY = Math.abs(playerHitbox.getBoundsInParent().getCenterY() - inimigo.getCorpo().getBoundsInParent().getCenterY());
+    private void finalizarAtaque(long now) {
+        atacando = false;
+        danoAplicado = false;
+        attackTargetSet = false;
+        inimigo.getCorpo().setOpacity(1.0);
 
-        // Ajuste os valores conforme alcance do inimigo
-        return distanciaX < 60 && distanciaY < 40;
+        // Inicia cooldown
+        ataqueStartTime = now;
+        atacandoEmCooldown = true;
     }
 
-
-
-    public void processarAtaque(long now, HUDVida hudVida, ImageView playerHitbox) {
-        if (!atacando && podeAtacar(playerHitbox) && !bloqueado && !atacandoEmCooldown) {
-            iniciarAtaque(now); // inicia imediatamente
-        }
-
-        if (!atacando) return;
-
-        // Aplica dano apenas uma vez
-        if (!danoAplicado && now - ataqueStartTime >= ataqueDuration / 2) {
-            if (playerHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())) {
-                hudVida.tomarDano(inimigo.getDano(), personagem);
-            }
-            danoAplicado = true;
-        }
-
-        // Finaliza ataque
-        if (now - ataqueStartTime >= ataqueDuration) {
-            atacando = false;
-            atacandoEmCooldown = false;
-            lastAttackEndTime = now;
-        }
-    }
-
-
-    public boolean isAtacando() {
-        return atacando;
-    }
+    // =================== Métodos de estado ===================
+    public boolean isAttackTargetSet() { return attackTargetSet; }
+    public boolean isAtacando() { return atacando; }
+    public boolean isRunning() { return !atacando; } // apenas se não estiver atacando
 }

@@ -22,12 +22,6 @@ public class Player {
         this.dano = 15;
     }
 
-    public Player() {
-        this.sprite = null;
-        this.vida = 8;
-        this.dano = 15;
-    }
-
     public static boolean isSalaConcluida(Fase fase) {
         return salasConcluidas.contains(fase);
     }
@@ -56,8 +50,8 @@ public class Player {
         this.vida = vida;
     }
 
-    public boolean colidiuCom(Inimigo inimigo) {
-        return sprite.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent());
+    public ImageView getSprite () {
+        return sprite;
     }
 
     public int getDano() {
