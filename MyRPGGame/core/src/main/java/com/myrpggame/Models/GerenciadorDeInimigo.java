@@ -52,23 +52,27 @@ public class GerenciadorDeInimigo {
                 case BOSS -> 200;
             };
             int dano = switch (tipo) {
-                case COMMON, FLYING, TANK -> 3;
+                case COMMON, FLYING -> 1;
+                case TANK -> 2;
                 case ARCHER -> 0;
-                case BOSS -> 10;
+                case BOSS -> 3;
             };
 
             // Imagem
             ImageView imagem = switch (tipo) {
-                case COMMON, FLYING, TANK, ARCHER -> new ImageView(
+                case COMMON, FLYING,  ARCHER -> new ImageView(
                         Objects.requireNonNull(getClass().getResource("/assets/KnightAFK_1.png")).toExternalForm()
                 );
                 case BOSS -> new ImageView(
-                        Objects.requireNonNull(getClass().getResource("/assets/inimigos/inimigo-tutorial.png")).toExternalForm()
+                        Objects.requireNonNull(getClass().getResource("/assets/inimigos/inimigo-tutorial.jpg")).toExternalForm()
+                );
+                case TANK -> new ImageView(
+                        Objects.requireNonNull(getClass().getResource("/assets/inimigos/tank/TankIdle.png")).toExternalForm()
                 );
             };
 
             // Posições
-            double x = 100 + random.nextInt((int)(fase.getLargura() - 200));
+            double x = 500 + random.nextInt((int)(fase.getLargura() - 200));
             double yChao = fase.getAltura() - 50;
 
             // Cria inimigo passando tipo

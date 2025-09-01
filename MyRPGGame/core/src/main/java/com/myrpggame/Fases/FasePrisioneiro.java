@@ -1,13 +1,10 @@
 package com.myrpggame.Fases;
 
 import com.myrpggame.Config.GameResolution.GameResolution;
-import com.myrpggame.Enum.EnemyType;
 import com.myrpggame.Models.Fase;
 import com.myrpggame.Models.GerenciadorDeInimigo;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
-import javafx.scene.paint.Color;
-import javafx.scene.shape.Rectangle;
 
 import java.lang.reflect.Field;
 import java.util.HashSet;
@@ -53,11 +50,7 @@ public class FasePrisioneiro extends Fase {
         // Inicializa inimigos fixos
         gerInimigos = new GerenciadorDeInimigo(this);
         gerInimigos.inicializar();
-    }
-
-
-    public GerenciadorDeInimigo getGerenciadorDeInimigos() {
-        return gerInimigos;
+        gerInimigos.getInimigos().removeIf(inim -> inimigosMortos.contains(inim.getId()));
     }
 
     public Set<Integer> getInimigosMortos() {

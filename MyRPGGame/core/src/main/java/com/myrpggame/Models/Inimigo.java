@@ -1,6 +1,9 @@
 package com.myrpggame.Models;
 
+import com.myrpggame.Enum.EnemyState;
 import com.myrpggame.Enum.EnemyType;
+import com.myrpggame.Utils.Animation.EnemyAnimation;
+import com.myrpggame.Utils.Attack.EnemyAttack;
 import javafx.scene.image.ImageView;
 import javafx.scene.shape.Rectangle;
 
@@ -12,6 +15,11 @@ public class Inimigo {
     private int dano;
     private boolean morto = false;
     private EnemyType enemyType;
+    private EnemyAttack enemyAttack;
+
+
+
+    private EnemyAnimation enemyAnimation;
 
     private double inicioX, inicioY; // posição inicial para patrulha
     private long lastSeenTime = 0;
@@ -48,6 +56,10 @@ public class Inimigo {
     public boolean estaMorto() { return morto; }
 
     public int getDano() { return dano; }
+
+    public EnemyType getEnemyType () {
+        return enemyType;
+    }
 
     public int getId() { return id; }
 
@@ -104,5 +116,34 @@ public class Inimigo {
                 }
             }
         }
+    }
+
+
+    public void atualizarDirecao(double playerX) {
+        double dx = playerX - corpo.getX();
+        if (dx != 0) {
+            corpo.setScaleX(dx > 0 ? 1 : -1); // olha para a direita se dx>0, esquerda se dx<0
+        }
+    }
+
+
+    public EnemyAnimation getAnimation() {
+        return enemyAnimation;
+    }
+
+    public void setAnimation(EnemyAnimation enemyAnimation) {
+        this.enemyAnimation = enemyAnimation;
+    }
+
+    public EnemyAttack getAttack() {
+        return enemyAttack;
+    }
+
+    public void setAttack(EnemyAttack enemyAttack) {
+        this.enemyAttack = enemyAttack;
+    }
+
+    public double getVelocidadeX() {
+        return velocidade;
     }
 }

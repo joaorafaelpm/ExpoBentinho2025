@@ -1,8 +1,11 @@
 package com.myrpggame.Utils;
 
+import com.myrpggame.Enum.EnemyType;
 import com.myrpggame.Models.*;
-import com.myrpggame.Utils.PlayerAnimation.PlayerAnimation;
-import com.myrpggame.Utils.PlayerAttack.PlayerAttack;
+import com.myrpggame.Utils.Animation.EnemyAnimation;
+import com.myrpggame.Utils.Animation.PlayerAnimation;
+import com.myrpggame.Utils.Attack.EnemyAttack;
+import com.myrpggame.Utils.Attack.PlayerAttack;
 import com.myrpggame.Utils.PlayerCamera.Camera;
 import com.myrpggame.Utils.PlayerMovement.PlayerMovement;
 import javafx.animation.AnimationTimer;
@@ -42,7 +45,7 @@ public class GameLoop extends AnimationTimer {
     private long lastEnemyHitTime = 0;
 
     private static final long MORTE_DURATION = 1_500_000_000; // 1,5s
-    private static final long REVIVE_TOTAL_DURATION = 8_000_000_000L; // 8s
+    private static final long REVIVE_TOTAL_DURATION = 5_000_000_000L; // 8s
 
     public GameLoop(ImageView player, Pane gameWorld, Pane pauseMenu, Set<javafx.scene.input.KeyCode> pressedKeys, HUDVida hudVida) {
         this.player = player;
@@ -92,6 +95,8 @@ public class GameLoop extends AnimationTimer {
         gameWorld.setTranslateY(-camera.getY());
 
         // Atualiza animações do player
+
+
         playerAnimation.atualizarFlags(morto, respawning, atacando, dashando, morteStartTime, reviveStartTime);
         playerAnimation.atualizarEstado(now);
         playerAnimation.atualizarAnimacao(now);
@@ -110,17 +115,42 @@ public class GameLoop extends AnimationTimer {
         }
     }
 
+
+
     private void atualizarInimigos(long now) {
         for (Inimigo inimigo : new ArrayList<>(inimigos)) {
             inimigo.atualizar(now);
-            inimigo.seguir(player.getTranslateX(), player.getTranslateY() , now);
-            if (player.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())
-                    && now - lastEnemyHitTime >= ENEMY_ATTACK_COOLDOWN) {
-                hudVida.tomarDano(inimigo.getDano(), personagem);
-                lastEnemyHitTime = now;
+            inimigo.seguir(player.getTranslateX(), player.getTranslateY(), now);
+            inimigo.atualizarDirecao(player.getTranslateX());
+
+            // Atualiza ataque do inimigo
+            EnemyAttack ataque = inimigo.getAttack();
+            if (ataque != null) {
+                ataque.processarAtaque(now, hudVida, player);
+
+                // Atualiza animação de ataque
+                if (inimigo.getEnemyType() == EnemyType.TANK && inimigo.getAnimation() != null) {
+                    inimigo.getAnimation().atualizarEstado(inimigo); // define ATTACKING ou IDLE
+                    inimigo.getAnimation().atualizarAnimacao(inimigo);
+                }
+            }
+
+            // Atualiza animação apenas para TANK
+            if (inimigo.getEnemyType() == EnemyType.TANK && inimigo.getAnimation() != null) {
+                inimigo.getAnimation().atualizarAnimacao(inimigo);
+            }
+
+            if (inimigo.estaMorto()) {
+                inimigos.remove(inimigo);
+                gameWorld.getChildren().remove(inimigo.getCorpo());
             }
         }
+
+        if (inimigos.isEmpty() && !Player.isSalaConcluida(gerenciadorDeFase.getFaseAtual())) {
+            Player.concluirSala(gerenciadorDeFase.getFaseAtual());
+        }
     }
+
 
     private void iniciarMorte(long now) {
         morto = true;
@@ -134,8 +164,13 @@ public class GameLoop extends AnimationTimer {
         morto = false;
         reviveStartTime = now;
 
-        // Recupera a vida do personagem
         hudVida.resetarVida();
+
+        //  resetar salas concluídas (assim ao recomeçar os inimigos voltam)
+        Player.reset();
+
+        //  voltar para a primeira fase
+        gerenciadorDeFase.resetarFases(); // você vai criar esse método no GerenciadorDeFase
 
         carregarSala();
         posicionarPlayerNoInicio();
@@ -156,23 +191,26 @@ public class GameLoop extends AnimationTimer {
         // Adiciona player
         gameWorld.getChildren().add(player);
 
-        // Inicializa inimigos usando GerenciadorDeInimigo
+        // Inimigos
         GerenciadorDeInimigo gerInimigos = fase.getGerenciadorDeInimigo();
-        gerInimigos.inicializar();
-
-        // Remove inimigos mortos caso a fase seja aleatória
-        if (fase instanceof com.myrpggame.Fases.FasePrisioneiro) {
-            gerInimigos.getInimigos().removeIf(i -> ((com.myrpggame.Fases.FasePrisioneiro) fase).getInimigosMortos().contains(i.getId()));
-        } else if (fase instanceof com.myrpggame.Fases.FaseFloresta) {
-            gerInimigos.getInimigos().removeIf(i -> ((com.myrpggame.Fases.FaseFloresta) fase).getInimigosMortos().contains(i.getId()));
-        }
 
         inimigos.clear();
-        inimigos.addAll(gerInimigos.getInimigos());
+        if (!Player.isSalaConcluida(fase)) {
+            gerInimigos.inicializar(); // só inicializa se não concluída
+            inimigos.addAll(gerInimigos.getInimigos());
 
-        // Adiciona inimigos ao gameWorld
-        for (Inimigo inimigo : inimigos) {
-            gameWorld.getChildren().add(inimigo.getCorpo());
+            for (Inimigo inimigo : inimigos) {
+                // Cria EnemyAttack e EnemyAnimation individuais
+                EnemyAttack ataque = new EnemyAttack(inimigo , personagem);
+                EnemyAnimation anim = new EnemyAnimation();
+
+                // Associa aos inimigos
+                inimigo.setAttack(ataque);
+                inimigo.setAnimation(anim);
+
+                // Adiciona visual
+                gameWorld.getChildren().add(inimigo.getCorpo());
+            }
         }
 
         playerAttack.setInimigos(inimigos);
@@ -210,6 +248,7 @@ public class GameLoop extends AnimationTimer {
             if (!gerenciadorDeFase.primeiraFase()) {
                 gerenciadorDeFase.voltarFase();
                 carregarSala();
+
                 player.setTranslateX(gerenciadorDeFase.getFaseAtual().getLargura() - 40);
             } else player.setTranslateX(0);
         }

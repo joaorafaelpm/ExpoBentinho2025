@@ -1,4 +1,4 @@
-package com.myrpggame.Utils.PlayerAnimation;
+package com.myrpggame.Utils.Animation;
 
 import com.myrpggame.Config.ResourceLoader.ResourceLoader;
 import com.myrpggame.Enum.PlayerState;
@@ -13,10 +13,10 @@ import static com.myrpggame.Utils.PlayerMovement.PlayerMovement.isFacingRight;
 public class PlayerAnimation {
 
     private static final long MORTE_DURATION = 1_500_000_000;
-    private static final long REVIVE_PHASE1_DURATION = 5_000_000_000L;
-    private static final long REVIVE_PHASE2_DURATION = 3_000_000_000L;
+    private static final long REVIVE_PHASE1_DURATION = 3_000_000_000L;
+    private static final long REVIVE_PHASE2_DURATION = 2_000_000_000L;
     private static final int REVIVE_PHASE1_FRAMES = 8;
-    private static final int REVIVE_PHASE2_FRAMES = 3;
+    private static final int REVIVE_PHASE2_FRAMES = 2;
 
     private long lastUpdate = 0;
     private int currentFrame = 0;
@@ -39,6 +39,8 @@ public class PlayerAnimation {
     private int frameIdle = 0;
     private int frameRunning = 0;
     private int frameJumping = 0;
+    private int frameDying = 0;
+
     private int frameDashing = 0;
     private int frameAttacking = 0;
 
@@ -156,9 +158,9 @@ public class PlayerAnimation {
     }
 
     private void animAttacking() {
-        if (currentFrame == 0 || currentFrame == 4) currentFrame = 1;
-        if (currentFrame < 3) currentFrame++;
-        player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightLightAttack_%d.png", currentFrame)));
+        if (frameAttacking == 0 || frameAttacking == 4) frameAttacking = 1;
+        if (frameAttacking < 3) frameAttacking++;
+        player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightLightAttack_%d.png", frameAttacking)));
         aplicarDirecao(true);
     }
 
@@ -173,9 +175,9 @@ public class PlayerAnimation {
     }
 
     private void animDead(long now) {
-        if (currentFrame == 0) currentFrame = 1;
-        if (currentFrame < 14) currentFrame++;
-        player.setImage(ResourceLoader.loadImage(String.format("/assets/dying/PlayerDying_%d.png", currentFrame)));
+        if (frameDying == 0) frameDying = 1;
+        if (frameDying < 14) frameDying++;
+        player.setImage(ResourceLoader.loadImage(String.format("/assets/dying/PlayerDying_%d.png", frameDying)));
 
         double elapsed = (now - morteStartTime) / 1_000_000_000.0;
         double alturaImagem = player.getImage().getHeight();
@@ -185,56 +187,65 @@ public class PlayerAnimation {
         double progress = Math.min(elapsed / duration, 1.0);
 
         player.setTranslateY(startY + (endY - startY) * progress);
-        player.setTranslateX(larguraSala / 2 - player.getBoundsInParent().getWidth() / 2);
     }
 
     private void animRespawning(long now) {
         long elapsedNanos = now - reviveStartTime;
 
+        // ===== Fase 1 do respawn =====
         if (elapsedNanos < REVIVE_PHASE1_DURATION) {
             long frameDurationPhase1 = REVIVE_PHASE1_DURATION / REVIVE_PHASE1_FRAMES;
             int frameIndex = (int) (elapsedNanos / frameDurationPhase1) + 1;
             if (frameIndex > REVIVE_PHASE1_FRAMES) frameIndex = REVIVE_PHASE1_FRAMES;
 
-            player.setImage(ResourceLoader.loadImage(String.format("/assets/reviving/PlayerReviving_%d.png", frameIndex)));
+            player.setImage(ResourceLoader.loadImage(
+                    String.format("/assets/reviving/PlayerReviving_%d.png", frameIndex)));
             aplicarDirecao(true);
 
+            // Interpolação vertical suave
             double t = (double) elapsedNanos / REVIVE_PHASE1_DURATION;
-            t = 1 - Math.pow(1 - t, 2);
+            t = 1 - Math.pow(1 - t, 2); // ease-out
             double alturaImagem = player.getImage().getHeight();
             double startY = (alturaSala - alturaImagem) / 2;
             double endY = alturaSala - alturaImagem;
             player.setTranslateY(startY + (endY - startY) * t);
             player.setTranslateX(40);
-        } else if (elapsedNanos < REVIVE_PHASE1_DURATION + REVIVE_PHASE2_DURATION) {
+        }
+        // ===== Fase 2 do respawn =====
+        else if (elapsedNanos < REVIVE_PHASE1_DURATION + REVIVE_PHASE2_DURATION) {
             long phase2Elapsed = elapsedNanos - REVIVE_PHASE1_DURATION;
+
+            // Agora cada frame tem duração uniforme
             long frameDurationPhase2 = REVIVE_PHASE2_DURATION / REVIVE_PHASE2_FRAMES;
             int frameIndex = 9 + (int) (phase2Elapsed / frameDurationPhase2);
-            if (frameIndex > 11) frameIndex = 11;
+            if (frameIndex > 10) frameIndex = 10; // limita ao último frame
 
-            player.setImage(ResourceLoader.loadImage(String.format("/assets/reviving/PlayerReviving_%d.png", frameIndex)));
+            player.setImage(ResourceLoader.loadImage(
+                    String.format("/assets/reviving/PlayerReviving_%d.png", frameIndex)));
             aplicarDirecao(true);
 
+            // Mantém player no chão
             double alturaImagem = player.getImage().getHeight();
             player.setTranslateY(alturaSala - alturaImagem);
             player.setTranslateX(40);
         }
     }
 
+
     private void animJumping(long now, PlayerMovement movement) {
         double chao = movement.getAlturaChao() - player.getImage().getHeight();
         double velocidadeY = movement.getVelocidadeY();
 
         if (velocidadeY < 0) {
-            if (currentFrame == 0 || currentFrame > 10) currentFrame = 1;
-            else currentFrame++;
+            if (frameJumping == 0 || frameJumping > 9) frameJumping = 1;
+            else frameJumping++;
         } else {
-            if (currentFrame < 11) currentFrame = 11;
-            else currentFrame = currentFrame == 11 ? 12 : 11;
+            if (frameJumping < 10) frameJumping = 10;
+            else frameJumping = frameJumping == 10 ? 11 : 10;
         }
 
         player.setImage(ResourceLoader.loadImage(
-                String.format("/assets/jumping/PlayerJumping_%d.png", currentFrame)));
+                String.format("/assets/jumping/PlayerJumping_%d.png", frameJumping)));
 
         aplicarDirecao(true); // sempre respeita direção do player no ar
 
