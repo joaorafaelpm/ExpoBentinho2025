@@ -60,8 +60,11 @@ public class GerenciadorDeInimigo {
 
             // Imagem
             ImageView imagem = switch (tipo) {
-                case COMMON, ARCHER -> new ImageView(
-                        Objects.requireNonNull(getClass().getResource("/assets/KnightAFK_1.png")).toExternalForm()
+                case ARCHER-> new ImageView(
+                        Objects.requireNonNull(getClass().getResource("/assets/inimigos/archer/gothgirlstepsister_1.png")).toExternalForm()
+                );
+                case COMMON -> new ImageView(
+                        Objects.requireNonNull(getClass().getResource("/assets/inimigos/common/CommonIdle_1.png")).toExternalForm()
                 );
                 case FLYING -> new ImageView(
                         Objects.requireNonNull(getClass().getResource("/assets/inimigos/flying/FlyingRunning_1.png")).toExternalForm()
@@ -74,9 +77,12 @@ public class GerenciadorDeInimigo {
                 );
             };
 
+            double x = 500 + random.nextInt((int)(fase.getLargura() - 500));
             // Posições
-            double x = 500 + random.nextInt((int)(fase.getLargura() - 200));
-            double yChao = fase.getAltura() - 50;
+            if (tipo == EnemyType.BOSS) {
+                x = fase.getLargura() - 500;
+            }
+            double yChao = fase.getAltura();
 
             // Cria inimigo passando tipo
             Inimigo novo = new Inimigo(x, yChao, tamanho, velocidade, i, vida, dano, tipo, imagem);
