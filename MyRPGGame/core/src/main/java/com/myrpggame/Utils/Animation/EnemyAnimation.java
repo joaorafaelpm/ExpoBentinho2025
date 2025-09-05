@@ -17,7 +17,7 @@ public class EnemyAnimation {
     private EnemyState estado = EnemyState.IDLE;
 
     // Para escolher 1 vez só a animação de ataque
-    private int ataqueAnimSelecionada = random.nextInt(2);
+    private int ataqueAnimSelecionada = 0;
     private int maxTankFramesAtaqueOne = 2; // padrão
     private int maxTankFramesAtaqueTwo = 6; // padrão
 
@@ -29,6 +29,9 @@ public class EnemyAnimation {
     private int runningFlyingFrame = 1;
     private int idleFrame = 1;
     private int maxFramesIdle = 2;
+
+    private int maxArcherFramesAtaque = 4;
+    private int archerFrameAttack = 1;
 
     public void atualizarEstado(Inimigo inimigo) {
         if (inimigo.getAttack().isAtacando()) {
@@ -55,6 +58,7 @@ public class EnemyAnimation {
 
                 switch (estado) {
                     case ATTACKING -> {
+                        ataqueAnimSelecionada = random.nextInt(2);
                         if (ataqueAnimSelecionada == 1) animTankAttack1(inimigo);
                         else animTankAttack2(inimigo);
                     }
@@ -88,10 +92,38 @@ public class EnemyAnimation {
                     default -> commonIdle(inimigo);
                 }
             }
+
+            case ARCHER -> {
+                long frameDuration = switch (estado) {
+                    case ATTACKING -> 200_000_000L;
+                    default -> 400_000_000L;
+                };
+
+                if (now - lastUpdate < frameDuration) return;
+
+                switch (estado) {
+                    case ATTACKING -> archerAttack(inimigo);
+                    default -> inimigo.getCorpo().setImage(
+                            ResourceLoader.loadImage("/assets/inimigos/archer/ArcherIdle_1.png")
+                    );
+                }
+            }
         }
 
         lastUpdate = now;
     }
+
+     public void archerAttack (Inimigo inimigo) {
+        archerFrameAttack++;
+
+        if (archerFrameAttack > maxArcherFramesAtaque) archerFrameAttack = 1;
+
+        inimigo.getCorpo().setImage(ResourceLoader.loadImage(
+                String.format("/assets/inimigos/archer/ArcherAttack_%d", archerFrameAttack)
+        ));
+
+    }
+
 
     public void commonIdle (Inimigo inimigo) {
         idleFrame++;
@@ -101,6 +133,8 @@ public class EnemyAnimation {
                 String.format("/assets/inimigos/common/CommonIdle_%d.png", idleFrame)
         ));
     }
+
+   
 
     // ====== COMMON RUNNING ======
     public void commonRunning(Inimigo inimigo) {

@@ -29,15 +29,15 @@ public class GerenciadorDeInimigo {
             // Para fases normais, aleatoriza tipo exceto BOSS
             if (!(fase instanceof com.myrpggame.Fases.FaseChefao)) {
                 EnemyType[] tipos = {EnemyType.COMMON, EnemyType.TANK, EnemyType.FLYING, EnemyType.ARCHER};
-                tipo = tipos[random.nextInt(tipos.length)];
+                tipo = EnemyType.ARCHER;
             } else {
                 tipo = EnemyType.BOSS;
             }
 
             // Tamanho e atributos
             int tamanho = switch (tipo) {
-                case COMMON, FLYING, ARCHER -> 100;
-                case TANK -> 200;
+                case COMMON, FLYING -> 100;
+                case TANK, ARCHER -> 200;
                 case BOSS -> 500;
             };
             int velocidade = switch (tipo) {
@@ -54,14 +54,14 @@ public class GerenciadorDeInimigo {
             int dano = switch (tipo) {
                 case COMMON, FLYING -> 1;
                 case TANK -> 2;
-                case ARCHER -> 0;
-                case BOSS -> 3;
+                case ARCHER -> 1;
+                case BOSS -> 2;
             };
 
             // Imagem
             ImageView imagem = switch (tipo) {
                 case ARCHER-> new ImageView(
-                        Objects.requireNonNull(getClass().getResource("/assets/inimigos/archer/gothgirlstepsister_1.png")).toExternalForm()
+                        Objects.requireNonNull(getClass().getResource("/assets/inimigos/archer/ArcherIdle_1.png")).toExternalForm()
                 );
                 case COMMON -> new ImageView(
                         Objects.requireNonNull(getClass().getResource("/assets/inimigos/common/CommonIdle_1.png")).toExternalForm()
@@ -80,7 +80,7 @@ public class GerenciadorDeInimigo {
             double x = 500 + random.nextInt((int)(fase.getLargura() - 500));
             // Posições
             if (tipo == EnemyType.BOSS) {
-                x = fase.getLargura() - 500;
+                x = fase.getLargura()/2;
             }
             double yChao = fase.getAltura();
 

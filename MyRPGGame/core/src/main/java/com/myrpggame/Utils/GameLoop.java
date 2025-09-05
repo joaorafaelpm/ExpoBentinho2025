@@ -129,14 +129,16 @@ public class GameLoop extends AnimationTimer {
                     inimigo.seguir(player.getTranslateX(), player.getTranslateY(), now);
                 }
 
+                ataque.updateProjectiles(hudVida, player, gameWorld);
 
                 // Processa ataque
-                ataque.processarInimigo(now, hudVida, player);
+                ataque.processarInimigo(now, hudVida, player , gameWorld);
 
                 if (inimigo.getAnimation() != null) {
                     inimigo.getAnimation().atualizarEstado(inimigo);
                     inimigo.getAnimation().atualizarAnimacao(inimigo);
                 }
+
             }
 
             if (inimigo.estaMorto()) {
@@ -196,12 +198,15 @@ public class GameLoop extends AnimationTimer {
 
             for (Inimigo inimigo : inimigos) {
                 // Cria EnemyAttack e EnemyAnimation individuais
-                EnemyAttack ataque = new EnemyAttack(inimigo , personagem);
+                EnemyAttack ataque = new EnemyAttack(inimigo , personagem , gameWorld);
                 EnemyAnimation anim = new EnemyAnimation();
 
                 // Associa aos inimigos
                 inimigo.setAttack(ataque);
                 inimigo.setAnimation(anim);
+
+
+
 
                 // Adiciona visual
                 gameWorld.getChildren().add(inimigo.getCorpo());

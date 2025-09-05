@@ -36,8 +36,8 @@ public class Inimigo {
         this.corpo = imageView;
         this.corpo.setFitWidth(tamanho);
         this.corpo.setFitHeight(tamanho);
-        this.corpo.setX(x);
-        this.corpo.setY(enemyType == EnemyType.FLYING ? y - 200 : y - tamanho);
+        this.corpo.setTranslateX(x);
+        this.corpo.setTranslateY(enemyType == EnemyType.FLYING ? y - 200 : y - tamanho);
         this.velocidade = velocidade;
         this.vida = vida;
         this.dano = dano;
@@ -99,21 +99,22 @@ public class Inimigo {
         if (dentroCampoVisao || now - lastSeenTime <= REACTION_DELAY) {
             double distancia = Math.sqrt(dx * dx + dy * dy);
             if (distancia > 0) {
-                corpo.setX(corpo.getX() + (dx / distancia) * velocidade);
+                corpo.setX(corpo.getTranslateX() + (dx / distancia) * velocidade);
                 if (enemyType == EnemyType.FLYING) {
-                    corpo.setY(corpo.getY() + (dy / distancia) * velocidade);
+                    corpo.setY(corpo.getTranslateY() + (dy / distancia) * velocidade);
                 }
             }
         } else if (now - lastSeenTime <= FORGET_DELAY) {
             // Retorna devagar à posição inicial
-            double pdx = inicioX - corpo.getX();
-            double pdy = inicioY - corpo.getY();
+            double pdx = inicioX - corpo.getTranslateX();
+            double pdy = inicioY - corpo.getTranslateY();
             double distPatrulha = Math.sqrt(pdx * pdx + pdy * pdy);
             if (distPatrulha > 0) {
-                corpo.setX(corpo.getX() + (pdx / distPatrulha) * (velocidade / 2));
+                corpo.setTranslateX(corpo.getTranslateX() + (dx / distPatrulha) * velocidade);
                 if (enemyType == EnemyType.FLYING) {
-                    corpo.setY(corpo.getY() + (pdy / distPatrulha) * (velocidade / 2));
+                    corpo.setTranslateY(corpo.getTranslateY() + (dy / distPatrulha) * velocidade);
                 }
+
             }
         }
     }

@@ -2,8 +2,14 @@ package com.myrpggame.Utils.Attack;
 
 import com.myrpggame.Models.Inimigo;
 import com.myrpggame.Models.Player;
+import com.myrpggame.Models.Projectile;
 import com.myrpggame.Utils.HUDVida;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.Pane;
+
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class EnemyAttack {
 
@@ -27,11 +33,19 @@ public class EnemyAttack {
     private double ultimoY = 0;
     private static final double MOVE_EPS = 0.5; // tolerância pra evitar “tremida”
 
-    public EnemyAttack(Inimigo inimigo, Player personagem) {
+    private long lastShotTime = 0;
+    private static final long SHOT_INTERVAL = 1_000_000_000; // 1 segundo
+
+
+    private final List<Projectile> projectiles = new ArrayList<>();
+
+    private final Pane gameWorld;
+
+    public EnemyAttack(Inimigo inimigo, Player personagem , Pane gameWorld) {
         this.inimigo = inimigo;
         this.personagem = personagem;
         definirDuracoes();
-
+        this.gameWorld = gameWorld;
         // salvar posição inicial do inimigo (posição visual)
         if (inimigo.getCorpo() != null) {
             this.ultimoX = getVisualX(inimigo.getCorpo());
@@ -78,7 +92,7 @@ public class EnemyAttack {
     }
 
     // =================== Método principal ===================
-    public void processarInimigo(long now, HUDVida hudVida, ImageView playerHitbox) {
+    public void processarInimigo(long now, HUDVida hudVida, ImageView playerHitbox , Pane gameWorld) {
         processCooldown(now);
 
         // verificar movimento aqui (GameLoop já chamou inimigo.seguir antes)
@@ -86,9 +100,82 @@ public class EnemyAttack {
 
         switch (inimigo.getEnemyType()) {
             case FLYING -> processFlying(now, hudVida, playerHitbox);
+            case ARCHER -> processArcher(now , hudVida , playerHitbox , gameWorld);
             default     -> processDefault(now, hudVida, playerHitbox);
         }
     }
+
+    private void processArcher(long now, HUDVida hudVida, ImageView playerHitbox, Pane gameWorld) {
+        if (!atacando && !atacandoEmCooldown) {
+            if (povArcher(inimigo, playerHitbox) && now - lastShotTime >= SHOT_INTERVAL) {
+                lastShotTime = now;
+                iniciarAtaque(now);
+
+                // cria a flecha
+                double dx = playerHitbox.getTranslateX() - inimigo.getCorpo().getTranslateX();
+                double dy = playerHitbox.getTranslateY() - inimigo.getCorpo().getTranslateY();
+
+                Projectile flecha = new Projectile(
+                        inimigo.getCorpo().getTranslateX() + inimigo.getCorpo().getBoundsInLocal().getWidth()/2,
+                        inimigo.getCorpo().getTranslateY() + inimigo.getCorpo().getBoundsInLocal().getHeight()/2,
+                        dx, dy,
+                        8,
+                        inimigo.getDano(),
+                        "/assets/inimigos/archer/projectile.png",
+                        playerHitbox
+                );
+                projectiles.add(flecha);
+            }
+        }
+
+        // Atualiza projéteis
+        updateProjectiles(hudVida, playerHitbox, gameWorld);
+
+        if (now - ataqueStartTime >= ataqueDuration) {
+            finalizarAtaque(now);
+        }
+    }
+
+    public void updateProjectiles(HUDVida hudVida, ImageView playerHitbox, Pane gameWorld) {
+        Iterator<Projectile> iterator = projectiles.iterator();
+
+        while (iterator.hasNext()) {
+            Projectile p = iterator.next();
+            p.update();
+
+            // adiciona visual se ainda não estiver
+            if (!gameWorld.getChildren().contains(p.getCorpo())) {
+                gameWorld.getChildren().add(p.getCorpo());
+            }
+
+            // colisão com player
+            if (p.getCorpo().getBoundsInParent().intersects(playerHitbox.getBoundsInParent())) {
+                hudVida.tomarDano(p.getDano(), personagem);
+                gameWorld.getChildren().remove(p.getCorpo());
+                iterator.remove();
+                continue;
+            }
+
+            // remover se sair da tela
+            if (p.getCorpo().getTranslateX() < 0 || p.getCorpo().getTranslateX() > 1920 ||
+                    p.getCorpo().getTranslateY() < 0 || p.getCorpo().getTranslateY() > 1080) {
+                gameWorld.getChildren().remove(p.getCorpo());
+                iterator.remove();
+            }
+        }
+    }
+
+
+    private boolean povArcher(Inimigo inimigo, ImageView player) {
+        double alcanceHorizontal = 400;
+        double alcanceVertical = 300;
+
+        double dx = player.getTranslateX() - inimigo.getCorpo().getTranslateX();
+        double dy = player.getTranslateY() - inimigo.getCorpo().getTranslateY();
+
+        return Math.abs(dx) <= alcanceHorizontal && Math.abs(dy) <= alcanceVertical;
+    }
+
 
     // =================== Inimigos voadores ===================
     private void processFlying(long now, HUDVida hudVida, ImageView playerHitbox) {
@@ -157,6 +244,11 @@ public class EnemyAttack {
         // Inicia cooldown
         ataqueStartTime = now;
         atacandoEmCooldown = true;
+    }
+
+
+    public List<Projectile> getProjectiles() {
+        return projectiles;
     }
 
     // =================== Métodos de estado ===================
