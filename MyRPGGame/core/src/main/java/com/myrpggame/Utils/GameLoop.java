@@ -6,6 +6,8 @@ import com.myrpggame.Utils.Animation.EnemyAnimation;
 import com.myrpggame.Utils.Animation.PlayerAnimation;
 import com.myrpggame.Utils.Attack.EnemyAttack;
 import com.myrpggame.Utils.Attack.PlayerAttack;
+import com.myrpggame.Utils.Attack.boss.BossAttack;
+import com.myrpggame.Utils.Attack.boss.BossProjectile;
 import com.myrpggame.Utils.PlayerCamera.Camera;
 import com.myrpggame.Utils.PlayerMovement.PlayerMovement;
 import javafx.animation.AnimationTimer;
@@ -13,6 +15,7 @@ import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 
@@ -42,7 +45,20 @@ public class GameLoop extends AnimationTimer {
     private long reviveStartTime = 0;
 
     private static final long MORTE_DURATION = 1_500_000_000; // 1,5s
-    private static final long REVIVE_TOTAL_DURATION = 5_000_000_000L; // 8s
+    private static final long REVIVE_TOTAL_DURATION = 5_000_000_000L; // 5s
+
+    private final List<ImageView> orbs = new ArrayList<>();
+    private final List<double[]> orbsPendentes = new ArrayList<>(); // posições de orbs geradas por inimigos
+    private final List<BossProjectile> bossProjeteis = new ArrayList<>();
+
+    private boolean invulneravel = false;
+    private long invulneravelStart = 0;
+    private static final long INVULNERAVEL_DURATION = 1_000_000_000L; // 1s de invulnerabilidade
+
+
+
+    private BossAttack bossAttack; // inicializado somente se houver boss na sala
+
 
     public GameLoop(ImageView player, Pane gameWorld, Pane pauseMenu, Set<javafx.scene.input.KeyCode> pressedKeys, HUDVida hudVida) {
         this.player = player;
@@ -52,13 +68,11 @@ public class GameLoop extends AnimationTimer {
 
         Fase faseAtual = gerenciadorDeFase.getFaseAtual();
 
-        // Inicializa câmera
         this.camera = new Camera(getLargura(), getAltura(), faseAtual.getLargura(), faseAtual.getAltura());
 
-        // Inicializa player e sistemas
         this.personagem = hudVida.getPlayer();
         this.playerMovement = new PlayerMovement(player, faseAtual.getAltura(), pressedKeys, 0);
-        this.playerAttack = new PlayerAttack(player, gameWorld, personagem, 0, new ArrayList<>());
+        this.playerAttack = new PlayerAttack(player, gameWorld, personagem, 0, new ArrayList<>(), orbsPendentes);
         this.playerAnimation = new PlayerAnimation(getLargura(), faseAtual.getAltura(), morto, respawning,
                 playerAttack.isAtacando(), playerMovement.isDashing(), morteStartTime,
                 reviveStartTime, pressedKeys, player, 0 , playerMovement);
@@ -70,10 +84,42 @@ public class GameLoop extends AnimationTimer {
     public void handle(long now) {
         if (pauseMenu.isVisible()) return;
 
+        if (invulneravel && System.nanoTime() - invulneravelStart >= INVULNERAVEL_DURATION) {
+            invulneravel = false;
+        }
+
+        if (invulneravel) {
+            player.setVisible((System.nanoTime() / 100_000_000) % 2 == 0); // pisca
+        } else {
+            player.setVisible(true);
+        }
+
         boolean atacando = playerAttack.isAtacando();
         boolean dashando = playerMovement.isDashing();
 
-        // Movimento e ataque
+        if (bossAttack != null) {
+            bossAttack.atualizar(now); // atualiza boss e dispara ataque se necessário
+
+            // atualiza projéteis do boss
+            Iterator<BossProjectile> iter = bossAttack.getProjeteis().iterator();
+            while (iter.hasNext()) {
+                BossProjectile p = iter.next();
+                p.atualizar();
+
+                if (!invulneravel && p.colidiu(player)) {
+                    tomarDano(1); // agora respeita invulnerabilidade
+                    p.remover(gameWorld);
+                    iter.remove();
+                    continue;
+                }
+
+                if (p.saiuDaTela(gameWorld.getHeight())) {
+                    p.remover(gameWorld);
+                    iter.remove();
+                }
+            }
+        }
+
         if (!morto && !respawning) {
             playerMovement.aplicarGravidade();
             playerMovement.processarPulo(now);
@@ -92,11 +138,33 @@ public class GameLoop extends AnimationTimer {
         gameWorld.setTranslateY(-camera.getY());
 
         // Atualiza animações do player
-
-
         playerAnimation.atualizarFlags(morto, respawning, atacando, dashando, morteStartTime, reviveStartTime);
         playerAnimation.atualizarEstado(now);
         playerAnimation.atualizarAnimacao(now);
+
+        // =================== Gera orbs pendentes centralizadas ===================
+        if (!orbsPendentes.isEmpty()) {
+            for (double[] pos : new ArrayList<>(orbsPendentes)) {
+                gerarOrb(pos[0], pos[1]);
+            }
+            orbsPendentes.clear();
+        }
+
+        // =================== Coleta orbs ===================
+        for (int i = 0; i < orbs.size(); i++) {
+            ImageView orb = orbs.get(i);
+
+            if (player.getBoundsInParent().intersects(orb.getBoundsInParent())) {
+                // só coleta se não estiver com a vida cheia
+                if (personagem.getVida() < personagem.getVidaMaxima()) {
+                    hudVida.curar(1, personagem);
+                    gameWorld.getChildren().remove(orb);
+                    orbs.remove(i);
+                    i--;
+                }
+            }
+        }
+
 
         // Detecta morte
         if (personagem.getVida() <= 0 && !morto) iniciarMorte(now);
@@ -119,26 +187,18 @@ public class GameLoop extends AnimationTimer {
 
             EnemyAttack ataque = inimigo.getAttack();
             if (ataque != null) {
-                // Para inimigos voadores
-                if (inimigo.getEnemyType() == EnemyType.FLYING) {
-                    if (!ataque.isAtacando()) {
-                        inimigo.seguir(player.getTranslateX(), player.getTranslateY(), now);
-                    }
-                } else {
-                    // Inimigos normais continuam seguindo
+                if (inimigo.getEnemyType() == EnemyType.FLYING && !ataque.isAtacando()) {
+                    inimigo.seguir(player.getTranslateX(), player.getTranslateY(), now);
+                } else if (inimigo.getEnemyType() != EnemyType.FLYING) {
                     inimigo.seguir(player.getTranslateX(), player.getTranslateY(), now);
                 }
 
-                ataque.updateProjectiles(hudVida, player, gameWorld);
-
-                // Processa ataque
-                ataque.processarInimigo(now, hudVida, player , gameWorld);
+                ataque.processarInimigo(now, hudVida, player);
 
                 if (inimigo.getAnimation() != null) {
                     inimigo.getAnimation().atualizarEstado(inimigo);
                     inimigo.getAnimation().atualizarAnimacao(inimigo);
                 }
-
             }
 
             if (inimigo.estaMorto()) {
@@ -146,6 +206,18 @@ public class GameLoop extends AnimationTimer {
                 gameWorld.getChildren().remove(inimigo.getCorpo());
             }
         }
+    }
+
+    private void gerarOrb(double centerX, double centerY) {
+        ImageView orb = new ImageView("/assets/lifeOrb.png");
+        orb.setFitWidth(40);
+        orb.setFitHeight(40);
+
+        orb.setTranslateX(centerX - orb.getFitWidth() / 2.0);
+        orb.setTranslateY(centerY - orb.getFitHeight() / 2.0);
+
+        orbs.add(orb);
+        gameWorld.getChildren().add(orb);
     }
 
 
@@ -162,60 +234,54 @@ public class GameLoop extends AnimationTimer {
         reviveStartTime = now;
 
         hudVida.resetarVida();
-
-        //  resetar salas concluídas (assim ao recomeçar os inimigos voltam)
         Player.reset();
-
-        //  voltar para a primeira fase
-        gerenciadorDeFase.resetarFases(); // você vai criar esse método no GerenciadorDeFase
+        gerenciadorDeFase.resetarFases();
 
         carregarSala();
         posicionarPlayerNoInicio();
     }
 
-
     private void carregarSala() {
         Fase fase = gerenciadorDeFase.getFaseAtual();
-
         gameWorld.getChildren().clear();
 
-        // Inicializa fase
         fase.inicializar();
-
-        // Adiciona root da fase
         gameWorld.getChildren().add(fase.getRoot());
-
-        // Adiciona player
         gameWorld.getChildren().add(player);
 
-        // Inimigos
         GerenciadorDeInimigo gerInimigos = fase.getGerenciadorDeInimigo();
 
         inimigos.clear();
         if (!Player.isSalaConcluida(fase)) {
-            gerInimigos.inicializar(); // só inicializa se não concluída
+            gerInimigos.inicializar();
             inimigos.addAll(gerInimigos.getInimigos());
 
             for (Inimigo inimigo : inimigos) {
-                // Cria EnemyAttack e EnemyAnimation individuais
-                EnemyAttack ataque = new EnemyAttack(inimigo , personagem , gameWorld);
+                EnemyAttack ataque = new EnemyAttack(inimigo , personagem);
                 EnemyAnimation anim = new EnemyAnimation();
 
-                // Associa aos inimigos
                 inimigo.setAttack(ataque);
                 inimigo.setAnimation(anim);
 
-
-
-
-                // Adiciona visual
                 gameWorld.getChildren().add(inimigo.getCorpo());
+            }
+
+            if (bossAttack != null) {
+                bossAttack.resetar(); // limpa projéteis
+                bossAttack = null;
+            }
+
+
+            // Inicializa bossAttack se houver boss
+            for (Inimigo inimigo : inimigos) {
+                if (inimigo.getEnemyType() == EnemyType.BOSS) {
+                    bossAttack = new BossAttack(inimigo, personagem , gameWorld );
+                    break; // só precisa de 1 boss
+                }
             }
         }
 
         playerAttack.setInimigos(inimigos);
-
-        // Atualiza câmera
         camera.setPhaseSize(fase.getLargura(), fase.getAltura());
         camera.update(player.getTranslateX(), player.getTranslateY());
     }
@@ -230,29 +296,33 @@ public class GameLoop extends AnimationTimer {
     private void verificarTrocaSala() {
         Fase fase = gerenciadorDeFase.getFaseAtual();
 
-        // Avançar fase
         if (player.getTranslateX() > fase.getLargura() - 40 && !gerenciadorDeFase.ultimaFase()) {
             gerenciadorDeFase.avancarFase();
             carregarSala();
             posicionarPlayerNoInicio();
         }
 
-        // Limite direita última fase
         if (gerenciadorDeFase.ultimaFase()) {
             double maxX = fase.getLargura() - player.getBoundsInLocal().getWidth();
             if (player.getTranslateX() > maxX) player.setTranslateX(maxX);
         }
 
-        // Limite esquerda / voltar fase
         if (player.getTranslateX() < 0) {
             if (!gerenciadorDeFase.primeiraFase()) {
                 gerenciadorDeFase.voltarFase();
                 carregarSala();
-
                 player.setTranslateX(gerenciadorDeFase.getFaseAtual().getLargura() - 40);
             } else player.setTranslateX(0);
         }
     }
+
+    private void tomarDano(int dano) {
+        hudVida.tomarDano(dano, personagem);
+        invulneravel = true;
+        invulneravelStart = System.nanoTime();
+        // aqui você pode adicionar efeito visual, como piscar o player
+    }
+
 
     public PlayerMovement getPlayerMovement() { return playerMovement; }
     public PlayerAttack getPlayerAttack() { return playerAttack; }

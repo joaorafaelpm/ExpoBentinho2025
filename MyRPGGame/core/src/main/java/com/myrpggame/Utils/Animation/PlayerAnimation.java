@@ -7,7 +7,6 @@ import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 
 import java.util.Set;
-
 import static com.myrpggame.Utils.PlayerMovement.PlayerMovement.isFacingRight;
 
 public class PlayerAnimation {
@@ -36,13 +35,19 @@ public class PlayerAnimation {
     private PlayerState playerState;
     private PlayerMovement playerMovement;
 
-    private int frameIdle = 0;
-    private int frameRunning = 0;
-    private int frameJumping = 0;
-    private int frameDying = 0;
+    private int frameIdle = 1;
+    private int frameRunning = 1;
+    private int frameJumping = 1;
+    private int frameDying = 1;
 
-    private int frameDashing = 0;
-    private int frameAttacking = 0;
+    private int frameDashing = 1;
+    private int frameAttacking = 1;
+    private int maxFrameAttack = 3;
+    private long attackStartTime = 0;
+    private long lastAttackUpdate = 0;
+
+    private final long ATTACK_DURATION = 300_000_000;
+
 
 
     public PlayerAnimation(double larguraSala, double alturaSala,
@@ -100,9 +105,8 @@ public class PlayerAnimation {
         long frameDuration;
         switch (playerState) {
             case IDLE -> frameDuration = 200_000_000;
-            case RUNNING, DEAD -> frameDuration = 100_000_000;
+            case RUNNING, DEAD, ATTACKING -> frameDuration = 100_000_000;
             case DASHING -> frameDuration = 80_000_000;
-            case ATTACKING -> frameDuration = 50_000_000;
             case RESPAWNING -> frameDuration = 150_000_000;
             default -> frameDuration = 200_000_000;
         }
@@ -113,7 +117,7 @@ public class PlayerAnimation {
             case IDLE -> animIdle();
             case RUNNING -> animRunning();
             case DASHING -> animDashing();
-            case ATTACKING -> animAttacking();
+            case ATTACKING -> animAttacking(now);
             case LOOKING_UP -> animLookingUp();
             case LOOKING_DOWN -> animLookingDown();
             case DEAD -> animDead(now);
@@ -157,11 +161,35 @@ public class PlayerAnimation {
         if (playerMovement.onGround()) aplicarDirecao(true); // só aplica direção se estiver no chão
     }
 
-    private void animAttacking() {
-        if (frameAttacking == 0 || frameAttacking == 4) frameAttacking = 1;
-        if (frameAttacking < 3) frameAttacking++;
-        player.setImage(ResourceLoader.loadImage(String.format("/assets/KnightLightAttack_%d.png", frameAttacking)));
-        aplicarDirecao(true);
+    private void animAttacking(long now) {
+        long frameDuration = ATTACK_DURATION / maxFrameAttack;
+
+        // Inicializa o ataque caso seja o primeiro frame
+        if (frameAttacking == 0) {
+            frameAttacking = 1;
+            lastAttackUpdate = now;
+            player.setImage(ResourceLoader.loadImage(
+                    String.format("/assets/KnightLightAttack_%d.png", frameAttacking)
+            ));
+            aplicarDirecao(true);
+            return;
+        }
+
+        // Avança o frame se passou o tempo
+        if (now - lastAttackUpdate >= frameDuration) {
+            frameAttacking++;
+            if (frameAttacking > maxFrameAttack) {
+                frameAttacking = 0; // reseta para que no próximo ataque comece no 1
+                attackStartTime = 0; // opcional, garante que a próxima animação reinicie
+                return;
+            }
+
+            player.setImage(ResourceLoader.loadImage(
+                    String.format("/assets/KnightLightAttack_%d.png", frameAttacking)
+            ));
+            aplicarDirecao(true);
+            lastAttackUpdate = now;
+        }
     }
 
     private void animLookingUp() {

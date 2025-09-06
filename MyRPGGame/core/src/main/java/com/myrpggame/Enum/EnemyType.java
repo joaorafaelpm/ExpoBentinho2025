@@ -5,7 +5,6 @@ public enum EnemyType {
     COMMON,
     TANK,
     FLYING,
-    ARCHER,
     BOSS
 
 }

@@ -1,5 +1,6 @@
 package com.myrpggame.Models;
 
+import javafx.geometry.Bounds;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 
@@ -42,6 +43,16 @@ public class Player {
         this.vida += vida;
     }
 
+    // Retorna os bounds reais do player, incluindo translate
+    private Bounds getPlayerBounds(Player player) {
+        ImageView sprite = player.getSprite();
+        return sprite.localToScene(sprite.getBoundsInLocal());
+    }
+
+
+    public int getVidaMaxima () {
+        return vidaMaxima;
+    }
     public int getVida() {
         return vida;
     }

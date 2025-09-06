@@ -18,11 +18,12 @@ public class FasePrisioneiro extends Fase {
     private Set<Integer> inimigosMortos = new HashSet<>();
 
     public FasePrisioneiro() {
-        super(6000, GameResolution.getAltura());
+        super(10000, GameResolution.getAltura());
 
         // Quantidade aleatória de inimigos entre 3 e 6
         Random rand = new Random();
-        setQuantidadeInimigos(5 + rand.nextInt(10));
+        setQuantidadeInimigos(8 + rand.nextInt(4));
+        setQuantidadeInimigos(0);
     }
 
     @Override

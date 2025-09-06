@@ -79,7 +79,7 @@ public class PlayerMovement {
     public void processarMovimento() {
         if (dashing || bloqueado) return;
 
-        velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 10 : 5;
+        velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 500 : 5;
 
         if (pressedKeys.contains(KeyCode.A)) {
             player.setTranslateX(player.getTranslateX() - velocidadePlayer);
@@ -122,8 +122,8 @@ public class PlayerMovement {
         canDash = false;
         currentFrame = 0;
 
-        if (pressedKeys.contains(KeyCode.D)) dashVelocidade = 15;
-        else if (pressedKeys.contains(KeyCode.A)) dashVelocidade = -15;
+        if (pressedKeys.contains(KeyCode.D)) dashVelocidade = 30;
+        else if (pressedKeys.contains(KeyCode.A)) dashVelocidade = -30;
         else dashVelocidade = player.getScaleX() >= 0 ? -15 : 15;
     }
 

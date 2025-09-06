@@ -22,16 +22,16 @@ public class FaseFloresta extends Fase {
     private Set<Integer> inimigosMortos = new HashSet<>();
 
     public FaseFloresta() {
-        super(6000, GameResolution.getAltura());
+        super(10000, GameResolution.getAltura());
 
         // Quantidade aleatória de inimigos entre 5 e 10
         Random rand = new Random();
-        setQuantidadeInimigos(5 + rand.nextInt(6));
+        setQuantidadeInimigos(8 + rand.nextInt(4));
+        setQuantidadeInimigos(0);
     }
 
     @Override
     public void inicializar() {
-        double alturaChao = 50;
 
         Image img = new Image(
                 Objects.requireNonNull(getClass().getResource("/assets/background/forest.png")).toExternalForm()
@@ -65,6 +65,7 @@ public class FaseFloresta extends Fase {
     public Set<Integer> getInimigosMortos() {
         return inimigosMortos;
     }
+
 
 
     @Override

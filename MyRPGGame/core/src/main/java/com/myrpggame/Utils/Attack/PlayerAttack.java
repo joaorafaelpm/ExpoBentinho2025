@@ -6,9 +6,14 @@ import com.myrpggame.Models.Player;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 
 public class PlayerAttack {
+
+
 
     private final ImageView player;
     private final Pane root;
@@ -25,21 +30,27 @@ public class PlayerAttack {
 
     private final List<Integer> inimigosMortosPorFase;
 
-    private static final long ATAQUE_DURATION = 500_000_000;        // 0.5s
-    private static final long PLAYER_ATTACK_COOLDOWN = 400_000_000; // 0.4s
+    private static final long ATAQUE_DURATION = 300_000_000;        // 0.3s
+    private static final long PLAYER_ATTACK_COOLDOWN = 300_000_000; // 0.3s
+
+
 
     // NEW: inimigos atingidos neste golpe
-    private final java.util.Set<Integer> atingidosNesteAtaque = new java.util.HashSet<>();
+    private final Set<Integer> atingidosNesteAtaque = new HashSet<>();
 
     private int currentFrame;
 
-    public PlayerAttack(ImageView player, Pane root, Player personagem, int currentFrame, List<Integer> inimigosMortosPorFase) {
+    private final List<double[]> orbsParaGerar; // x,y
+
+    public PlayerAttack(ImageView player, Pane root, Player personagem, int currentFrame, List<Integer> inimigosMortosPorFase, List<double[]> orbsParaGerar) {
         this.player = player;
         this.root = root;
         this.personagem = personagem;
         this.currentFrame = currentFrame;
         this.inimigosMortosPorFase = inimigosMortosPorFase;
+        this.orbsParaGerar = orbsParaGerar;
     }
+
 
     public void setInimigos(List<Inimigo> inimigos) { this.inimigos = inimigos; }
 
@@ -90,6 +101,7 @@ public class PlayerAttack {
                 var eb = inimigo.getCorpo().getBoundsInParent();
                 var pb = player.getBoundsInParent();
                 double enemyCenterX = eb.getMinX() + eb.getWidth() / 2.0;
+                double enemyCenterY = eb.getMinY() + eb.getHeight() / 2.0;
                 double playerCenterX = pb.getMinX() + pb.getWidth() / 2.0;
                 double dir = Math.signum(enemyCenterX - playerCenterX);
                 if (dir == 0) dir = player.getScaleX() >= 0 ? 1 : -1; // fallback
@@ -97,13 +109,26 @@ public class PlayerAttack {
                 inimigo.aplicarKnockback(10 * dir, -0.5, 1.0);
 
                 if (inimigo.estaMorto()) {
+                    // 50% de chance de dropar orb
+                    if (Math.random() < 0.5) {
+                        var bounds = inimigo.getCorpo().getBoundsInParent();
+                        double centerX = bounds.getMinX() + bounds.getWidth() / 2.0;
+                        double centerY = bounds.getMinY() + bounds.getHeight() / 2.0;
+
+                        // Guarda posição centralizada para o GameLoop gerar orb
+                        orbsParaGerar.add(new double[]{centerX, centerY});
+                    }
+
+
                     root.getChildren().remove(inimigo.getCorpo());
                     inimigosMortosPorFase.add(inimigo.getId());
                     iter.remove();
                 }
+
             }
         }
     }
+
 
     public void atualizarHitboxAtaque() {
         if (atacando) {

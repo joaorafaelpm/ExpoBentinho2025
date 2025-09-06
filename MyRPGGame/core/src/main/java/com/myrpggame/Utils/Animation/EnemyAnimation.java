@@ -30,9 +30,6 @@ public class EnemyAnimation {
     private int idleFrame = 1;
     private int maxFramesIdle = 2;
 
-    private int maxArcherFramesAtaque = 4;
-    private int archerFrameAttack = 1;
-
     public void atualizarEstado(Inimigo inimigo) {
         if (inimigo.getAttack().isAtacando()) {
             estado = EnemyState.ATTACKING;
@@ -93,37 +90,10 @@ public class EnemyAnimation {
                 }
             }
 
-            case ARCHER -> {
-                long frameDuration = switch (estado) {
-                    case ATTACKING -> 200_000_000L;
-                    default -> 400_000_000L;
-                };
-
-                if (now - lastUpdate < frameDuration) return;
-
-                switch (estado) {
-                    case ATTACKING -> archerAttack(inimigo);
-                    default -> inimigo.getCorpo().setImage(
-                            ResourceLoader.loadImage("/assets/inimigos/archer/ArcherIdle_1.png")
-                    );
-                }
-            }
         }
 
         lastUpdate = now;
     }
-
-     public void archerAttack (Inimigo inimigo) {
-        archerFrameAttack++;
-
-        if (archerFrameAttack > maxArcherFramesAtaque) archerFrameAttack = 1;
-
-        inimigo.getCorpo().setImage(ResourceLoader.loadImage(
-                String.format("/assets/inimigos/archer/ArcherAttack_%d", archerFrameAttack)
-        ));
-
-    }
-
 
     public void commonIdle (Inimigo inimigo) {
         idleFrame++;
