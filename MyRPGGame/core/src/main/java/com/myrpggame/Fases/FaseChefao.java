@@ -1,15 +1,12 @@
 package com.myrpggame.Fases;
 
 import com.myrpggame.Config.GameResolution.GameResolution;
-import com.myrpggame.Enum.EnemyType;
 import com.myrpggame.Models.Fase;
 import com.myrpggame.Models.GerenciadorDeInimigo;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import java.lang.reflect.Field;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 
 public class FaseChefao extends Fase {
 
@@ -17,15 +14,14 @@ public class FaseChefao extends Fase {
 
     public FaseChefao() {
         super(2560, GameResolution.getAltura());
-
-        // Quantidade aleatória de inimigos entre 5 e 10
+//        Só o chefão
         setQuantidadeInimigos(1);
     }
 
     @Override
     public void inicializar() {
         Image img = new Image(
-                Objects.requireNonNull(getClass().getResource("/assets/background/salachefao.png")).toExternalForm()
+                Objects.requireNonNull(getClass().getResource("/assets/background/salachefao2.png")).toExternalForm()
         );
 
         double alturaTela = getAltura();

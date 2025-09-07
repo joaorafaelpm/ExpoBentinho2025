@@ -1,9 +1,7 @@
 package com.myrpggame.Models;
 
 import com.myrpggame.Enum.EnemyType;
-import com.myrpggame.Utils.HUDVida;
 import javafx.scene.image.ImageView;
-import javafx.scene.layout.Pane;
 
 import java.util.*;
 
@@ -36,24 +34,23 @@ public class GerenciadorDeInimigo {
 
             int width = switch (tipo) {
                 case COMMON, FLYING -> 100;
-                case TANK -> 200;
-                case BOSS -> 500;
+                case TANK, BOSS -> 200;
             };
 
             int heigth = switch (tipo) {
-                case COMMON ->  200 ;
+                case COMMON, TANK ->  200 ;
                 case FLYING -> 100;
-                case TANK -> 200;
-                case BOSS -> 500;
+                case BOSS -> 400;
             };
             int velocidade = switch (tipo) {
                 case COMMON, FLYING -> 5;
-                case TANK, BOSS -> 3;
+                case TANK -> 3;
+                case BOSS -> 0;
             };
             int vida = switch (tipo) {
                 case COMMON, FLYING -> 50;
                 case TANK -> 100;
-                case BOSS -> 200;
+                case BOSS -> 500;
             };
             int dano = switch (tipo) {
                 case COMMON, FLYING -> 1;
@@ -80,13 +77,13 @@ public class GerenciadorDeInimigo {
             double yChao = fase.getAltura();
 
             if (tipo == EnemyType.BOSS) {
-                x = fase.getLargura()- 700;
+                x = fase.getLargura() / 2 ;
             } else {
                 // gera posição X garantindo distância mínima
                 boolean posValida = false;
                 int tentativas = 0;
                 while (!posValida && tentativas < tentativasMax) {
-                    x = 500 + random.nextInt((int)(fase.getLargura() - 500));
+                    x = 500 + random.nextInt((int)(fase.getLargura()));
                     posValida = true;
                     for (Inimigo inim : inimigos) {
                         if (Math.abs(inim.getCorpo().getTranslateX() - x) < distanciaMinima) {

@@ -8,6 +8,7 @@ import com.myrpggame.Utils.Attack.EnemyAttack;
 import com.myrpggame.Utils.Attack.PlayerAttack;
 import com.myrpggame.Utils.Attack.boss.BossAttack;
 import com.myrpggame.Utils.Attack.boss.BossProjectile;
+import com.myrpggame.Utils.Attack.boss.BossProjectileParticle;
 import com.myrpggame.Utils.PlayerCamera.Camera;
 import com.myrpggame.Utils.PlayerMovement.PlayerMovement;
 import javafx.animation.AnimationTimer;
@@ -49,16 +50,12 @@ public class GameLoop extends AnimationTimer {
 
     private final List<ImageView> orbs = new ArrayList<>();
     private final List<double[]> orbsPendentes = new ArrayList<>(); // posições de orbs geradas por inimigos
-    private final List<BossProjectile> bossProjeteis = new ArrayList<>();
 
     private boolean invulneravel = false;
     private long invulneravelStart = 0;
-    private static final long INVULNERAVEL_DURATION = 1_000_000_000L; // 1s de invulnerabilidade
-
-
+    private static final long INVULNERAVEL_DURATION = 1_500_000_000L; // 1s de invulnerabilidade
 
     private BossAttack bossAttack; // inicializado somente se houver boss na sala
-
 
     public GameLoop(ImageView player, Pane gameWorld, Pane pauseMenu, Set<javafx.scene.input.KeyCode> pressedKeys, HUDVida hudVida) {
         this.player = player;
@@ -98,35 +95,70 @@ public class GameLoop extends AnimationTimer {
         boolean dashando = playerMovement.isDashing();
 
         if (bossAttack != null) {
+            playerAttack.setBossParticles(bossAttack.getParticles());
             bossAttack.atualizar(now); // atualiza boss e dispara ataque se necessário
 
             // atualiza projéteis do boss
             Iterator<BossProjectile> iter = bossAttack.getProjeteis().iterator();
+            Iterator<BossProjectileParticle> iterParticles = bossAttack.getParticles().iterator();
             while (iter.hasNext()) {
-                BossProjectile p = iter.next();
-                p.atualizar();
+                BossProjectile projectile = iter.next();
+                projectile.atualizar(gerenciadorDeFase.getFaseAtual().getAltura() , gerenciadorDeFase.getFaseAtual().getLargura());
 
-                if (!invulneravel && p.colidiu(player)) {
+                if (!invulneravel && projectile.colidiu(player)) {
                     tomarDano(1); // agora respeita invulnerabilidade
-                    p.remover(gameWorld);
+                    projectile.remover(gameWorld);
                     iter.remove();
                     continue;
                 }
 
-                if (p.saiuDaTela(gameWorld.getHeight())) {
-                    p.remover(gameWorld);
+                if (projectile.saiuDaTela(
+                        gerenciadorDeFase.getFaseAtual().getAltura(),
+                        gerenciadorDeFase.getFaseAtual().getLargura()
+                )) {
+                    projectile.remover(gameWorld);
                     iter.remove();
                 }
             }
+            while (iterParticles.hasNext()) {
+                BossProjectileParticle particle = iterParticles.next();
+
+                // se expirou (TTL) e ainda não está em fade, inicia fade
+                if (!particle.isDying() && particle.isExpired(now)) {
+                    particle.startFadeAndMark(gameWorld);
+                }
+
+                // atualiza movimento (se ainda estiver visível)
+                particle.seguir(player.getTranslateX(), player.getTranslateY(), now);
+
+                // colisão com player
+                if (!invulneravel && particle.colidiu(player)) {
+                    tomarDano(1);
+                    particle.startFadeAndMark(gameWorld);
+                    iterParticles.remove(); // remove da lista imediatamente (node será removido no callback)
+                    continue;
+                }
+
+                // se já foi removida do scenegraph (fade acabou) ou saiu da tela, remove da lista
+                if (particle.isRemoved() || particle.getCorpo().getParent() == null
+                        || particle.saiuDaTela(gerenciadorDeFase.getFaseAtual().getAltura(),
+                        gerenciadorDeFase.getFaseAtual().getLargura())) {
+                    iterParticles.remove();
+                }
+            }
+
+
         }
+
+
 
         if (!morto && !respawning) {
             playerMovement.aplicarGravidade();
             playerMovement.processarPulo(now);
             playerMovement.processarMovimento();
             playerMovement.processarDash(now);
-            playerAttack.processarAtaque(now);
             playerAttack.atualizarHitboxAtaque();
+            playerAttack.processarAtaque(now);
         }
 
         atualizarInimigos(now);
@@ -275,7 +307,7 @@ public class GameLoop extends AnimationTimer {
             // Inicializa bossAttack se houver boss
             for (Inimigo inimigo : inimigos) {
                 if (inimigo.getEnemyType() == EnemyType.BOSS) {
-                    bossAttack = new BossAttack(inimigo, personagem , gameWorld );
+                    bossAttack = new BossAttack(inimigo, personagem , gameWorld , gerenciadorDeFase.getFaseAtual());
                     break; // só precisa de 1 boss
                 }
             }
@@ -305,6 +337,11 @@ public class GameLoop extends AnimationTimer {
         if (gerenciadorDeFase.ultimaFase()) {
             double maxX = fase.getLargura() - player.getBoundsInLocal().getWidth();
             if (player.getTranslateX() > maxX) player.setTranslateX(maxX);
+//            Recebendo o boss
+            Inimigo inimigo = fase.getGerenciadorDeInimigo().getInimigos().getFirst();
+            if (!inimigo.estaMorto() && player.getTranslateX() < 0 ) {
+                player.setTranslateX(0);
+            }
         }
 
         if (player.getTranslateX() < 0) {

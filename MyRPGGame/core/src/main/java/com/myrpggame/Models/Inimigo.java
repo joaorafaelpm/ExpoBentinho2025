@@ -17,8 +17,6 @@ public class Inimigo {
     private EnemyType enemyType;
     private EnemyAttack enemyAttack;
 
-
-
     private EnemyAnimation enemyAnimation;
 
     private double inicioX, inicioY; // posição inicial para patrulha

@@ -122,8 +122,8 @@ public class PlayerMovement {
         canDash = false;
         currentFrame = 0;
 
-        if (pressedKeys.contains(KeyCode.D)) dashVelocidade = 30;
-        else if (pressedKeys.contains(KeyCode.A)) dashVelocidade = -30;
+        if (pressedKeys.contains(KeyCode.D)) dashVelocidade = 15;
+        else if (pressedKeys.contains(KeyCode.A)) dashVelocidade = -15;
         else dashVelocidade = player.getScaleX() >= 0 ? -15 : 15;
     }
 
