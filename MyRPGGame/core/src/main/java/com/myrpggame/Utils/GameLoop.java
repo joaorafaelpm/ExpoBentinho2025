@@ -12,8 +12,12 @@ import com.myrpggame.Utils.Attack.boss.BossProjectileParticle;
 import com.myrpggame.Utils.PlayerCamera.Camera;
 import com.myrpggame.Utils.PlayerMovement.PlayerMovement;
 import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
+import javafx.geometry.Pos;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
+import javafx.scene.layout.VBox;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -30,6 +34,7 @@ public class GameLoop extends AnimationTimer {
     private final Pane pauseMenu;
     private HUDVida hudVida;
     private final Camera camera;
+    private final VBox telaParabens;
 
     private final Player personagem;
     private final PlayerMovement playerMovement;
@@ -57,12 +62,24 @@ public class GameLoop extends AnimationTimer {
 
     private BossAttack bossAttack; // inicializado somente se houver boss na sala
 
-    public GameLoop(ImageView player, Pane gameWorld, Pane pauseMenu, Set<javafx.scene.input.KeyCode> pressedKeys, HUDVida hudVida) {
+    private long lastLifeOrbUse = 0;
+    private static final long LIFE_ORB_COOLDOWN = 100_000_000L; // 100ms em nanos
+
+    private final Set<KeyCode> pressedKeys;
+
+    final double BOSS_WAKE_DISTANCE = 300.0;
+    final double BOSS_WAKE_DISTANCE_SQ = BOSS_WAKE_DISTANCE * BOSS_WAKE_DISTANCE;
+
+    private boolean exibindoTelaParabens = false;
+
+
+    public GameLoop(ImageView player, Pane gameWorld, Pane pauseMenu, Set<KeyCode> pressedKeys, HUDVida hudVida , VBox telaParabens) {
         this.player = player;
+        this.telaParabens = telaParabens;
         this.gameWorld = gameWorld;
         this.pauseMenu = pauseMenu;
         this.hudVida = hudVida;
-
+        this.pressedKeys = pressedKeys;
         Fase faseAtual = gerenciadorDeFase.getFaseAtual();
 
         this.camera = new Camera(getLargura(), getAltura(), faseAtual.getLargura(), faseAtual.getAltura());
@@ -79,7 +96,7 @@ public class GameLoop extends AnimationTimer {
 
     @Override
     public void handle(long now) {
-        if (pauseMenu.isVisible()) return;
+        if (pauseMenu.isVisible() || telaParabens.isVisible()) return;
 
         if (invulneravel && System.nanoTime() - invulneravelStart >= INVULNERAVEL_DURATION) {
             invulneravel = false;
@@ -91,10 +108,28 @@ public class GameLoop extends AnimationTimer {
             player.setVisible(true);
         }
 
+        if (pressedKeys.contains(KeyCode.E)) {
+            tentarUsarLifeOrb(now);
+        }
         boolean atacando = playerAttack.isAtacando();
         boolean dashando = playerMovement.isDashing();
 
+
         if (bossAttack != null) {
+            if (!bossAttack.isAcordado()) {
+
+                double px = player.getTranslateX();
+                double py = player.getTranslateY();
+                double bx = bossAttack.getBossX();
+                double by = bossAttack.getBossY();
+
+                double dx = px - bx;
+                double dy = py - by;
+                double dist2 = dx * dx + dy * dy;
+                if (dist2 < BOSS_WAKE_DISTANCE_SQ) {
+                    bossAttack.acordar(now);
+                }
+            }
             playerAttack.setBossParticles(bossAttack.getParticles());
             bossAttack.atualizar(now); // atualiza boss e dispara ataque se necessário
 
@@ -146,10 +181,15 @@ public class GameLoop extends AnimationTimer {
                     iterParticles.remove();
                 }
             }
-
-
         }
 
+        if (bossAttack != null && bossAttack.isAcordado() && bossAttack.getBoss().estaMorto() && !exibindoTelaParabens) {
+            exibindoTelaParabens = true;
+            Platform.runLater(() -> {
+                // Aqui você chama a tela que já existe no GameGUI
+                telaParabens.setVisible(true);
+            });
+        }
 
 
         if (!morto && !respawning) {
@@ -160,6 +200,8 @@ public class GameLoop extends AnimationTimer {
             playerAttack.atualizarHitboxAtaque();
             playerAttack.processarAtaque(now);
         }
+
+
 
         atualizarInimigos(now);
         verificarTrocaSala();
@@ -194,6 +236,13 @@ public class GameLoop extends AnimationTimer {
                     orbs.remove(i);
                     i--;
                 }
+                else {
+                    hudVida.adicionarLifeOrb(1);
+                    personagem.adicionarLifeOrb(1);
+                    gameWorld.getChildren().remove(orb);
+                    orbs.remove(i);
+                    i--;
+                }
             }
         }
 
@@ -210,6 +259,19 @@ public class GameLoop extends AnimationTimer {
             playerAttack.desbloquearAtaque();
             respawning = false;
         }
+    }
+
+    private void tentarUsarLifeOrb(long now) {
+        if (now - lastLifeOrbUse < LIFE_ORB_COOLDOWN) return; // cooldown
+        if (personagem.getLifeOrb() <= 0) return; // sem orbs
+        if (personagem.getVida() >= personagem.getVidaMaxima()) return; // vida já cheia
+
+        // consome orb
+        personagem.removerLifeOrb(1);
+        hudVida.removerLifeOrb(1);
+        hudVida.curar(1, personagem);
+
+        lastLifeOrbUse = now;
     }
 
     private void atualizarInimigos(long now) {
@@ -273,7 +335,7 @@ public class GameLoop extends AnimationTimer {
         posicionarPlayerNoInicio();
     }
 
-    private void carregarSala() {
+    public void carregarSala() {
         Fase fase = gerenciadorDeFase.getFaseAtual();
         gameWorld.getChildren().clear();
 
@@ -318,7 +380,7 @@ public class GameLoop extends AnimationTimer {
         camera.update(player.getTranslateX(), player.getTranslateY());
     }
 
-    private void posicionarPlayerNoInicio() {
+    public void posicionarPlayerNoInicio() {
         Fase fase = gerenciadorDeFase.getFaseAtual();
         player.setTranslateX(40);
         player.setTranslateY(fase.getAltura() - player.getBoundsInLocal().getHeight());
@@ -338,7 +400,7 @@ public class GameLoop extends AnimationTimer {
             double maxX = fase.getLargura() - player.getBoundsInLocal().getWidth();
             if (player.getTranslateX() > maxX) player.setTranslateX(maxX);
 //            Recebendo o boss
-            Inimigo inimigo = fase.getGerenciadorDeInimigo().getInimigos().getFirst();
+            Inimigo inimigo = fase.getGerenciadorDeInimigo().getInimigos().get(0);
             if (!inimigo.estaMorto() && player.getTranslateX() < 0 ) {
                 player.setTranslateX(0);
             }
@@ -360,7 +422,15 @@ public class GameLoop extends AnimationTimer {
         // aqui você pode adicionar efeito visual, como piscar o player
     }
 
-
     public PlayerMovement getPlayerMovement() { return playerMovement; }
     public PlayerAttack getPlayerAttack() { return playerAttack; }
+    public HUDVida getHudVida() { return hudVida; }
+
+    public GerenciadorDeFase getGerenciadorDeFase() {
+        return gerenciadorDeFase;
+    }
+
+    public void setExibindoTelaParabens(boolean b) {
+        this.exibindoTelaParabens = b;
+    }
 }

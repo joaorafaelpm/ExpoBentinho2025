@@ -77,7 +77,7 @@ public class GerenciadorDeInimigo {
             double yChao = fase.getAltura();
 
             if (tipo == EnemyType.BOSS) {
-                x = fase.getLargura() / 2 ;
+                x = (fase.getLargura() / 2.0) - (width / 2.0);
             } else {
                 // gera posição X garantindo distância mínima
                 boolean posValida = false;

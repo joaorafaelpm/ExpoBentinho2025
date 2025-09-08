@@ -47,6 +47,9 @@ public class BossProjectileParticle {
         if (dx != 0) corpo.setScaleX(dx > 0 ? 1 : -1);
     }
 
+
+    public void markRemoved() { this.removed = true; }
+
     public ImageView getCorpo() { return corpo; }
 
     public long getSpawnTime() { return spawnTime; }

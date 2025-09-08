@@ -13,7 +13,7 @@ public class FaseTutorial extends Fase {
     private GerenciadorDeInimigo gerInimigos;
 
     public FaseTutorial() {
-        super(2000, GameResolution.getAltura());
+        super(3000, GameResolution.getAltura());
         setQuantidadeInimigos(0); // Apenas o boss
     }
 

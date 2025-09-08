@@ -1,9 +1,11 @@
 package com.myrpggame.Utils.Attack;
 
 import com.myrpggame.Config.ResourceLoader.ResourceLoader;
+import com.myrpggame.Enum.EnemyType;
 import com.myrpggame.Utils.Attack.boss.BossProjectileParticle;
 import com.myrpggame.Models.Inimigo;
 import com.myrpggame.Models.Player;
+import com.myrpggame.Utils.HUDVida;
 import javafx.animation.Timeline;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Pane;
@@ -87,18 +89,14 @@ public class PlayerAttack {
         // check colisão com inimigos
         // check colisão com inimigos
         if (inimigos != null) {
-            Iterator<Inimigo> iter = inimigos.iterator();
-            while (iter.hasNext()) {
-                Inimigo inimigo = iter.next();
+            Iterator<Inimigo> iterInimigo = inimigos.iterator();
+            while (iterInimigo.hasNext()) {
+                Inimigo inimigo = iterInimigo.next();
                 if (inimigo == null) continue;
 
                 if (ataqueHitbox.getBoundsInParent().intersects(inimigo.getCorpo().getBoundsInParent())
                         && !atingidosNesteAtaque.contains(inimigo.getId())) {
 
-                    inimigo.tomarDano(personagem.getDano());
-                    atingidosNesteAtaque.add(inimigo.getId());
-
-                    // Faz o corpo do inimigo piscar
                     Timeline piscar = new Timeline(
                             new javafx.animation.KeyFrame(javafx.util.Duration.seconds(0),
                                     new javafx.animation.KeyValue(inimigo.getCorpo().opacityProperty(), 1)),
@@ -109,6 +107,40 @@ public class PlayerAttack {
                     );
                     piscar.setCycleCount(3); // número de piscadas
                     piscar.play();
+
+                    // dano
+                    inimigo.tomarDano(personagem.getDano());
+                    atingidosNesteAtaque.add(inimigo.getId());
+
+                    // knockback (usa centros para decidir direção)
+                    var eb = inimigo.getCorpo().getBoundsInParent();
+                    var pb = player.getBoundsInParent();
+                    double enemyCenterX = eb.getMinX() + eb.getWidth() / 2.0;
+                    double enemyCenterY = eb.getMinY() + eb.getHeight() / 2.0;
+                    double playerCenterX = pb.getMinX() + pb.getWidth() / 2.0;
+                    double dir = Math.signum(enemyCenterX - playerCenterX);
+                    if (dir == 0) dir = player.getScaleX() >= 0 ? 1 : -1; // fallback
+
+                    if (inimigo.getEnemyType() != EnemyType.BOSS) {
+                        inimigo.aplicarKnockback(10 * dir, -0.5, 1.0);
+                    }
+
+                    if (inimigo.estaMorto()) {
+                        // 50% de chance de dropar orb
+                        if (Math.random() < 1) {
+                            var bounds = inimigo.getCorpo().getBoundsInParent();
+                            double centerX = bounds.getMinX() + bounds.getWidth() / 2.0;
+                            double centerY = bounds.getMinY() + bounds.getHeight() / 2.0;
+
+                            // Guarda posição centralizada para o GameLoop gerar orb
+                            orbsParaGerar.add(new double[]{centerX, centerY});
+                        }
+
+
+                        root.getChildren().remove(inimigo.getCorpo());
+                        inimigosMortosPorFase.add(inimigo.getId());
+                        iterInimigo.remove();
+                    }
                 }
             }
         }
@@ -132,8 +164,9 @@ public class PlayerAttack {
                     );
                     fadeOut.setOnFinished(e -> {
                         root.getChildren().remove(particle.getCorpo());
-                        iterP.remove();
+                        particle.markRemoved(); // cria um flag no BossProjectileParticle
                     });
+
                     fadeOut.play();
                 }
             }
@@ -153,4 +186,9 @@ public class PlayerAttack {
     }
 
     public boolean isAtacando() { return atacando; }
+
+    public Player getPlayer() {
+        return personagem;
+    }
+
 }

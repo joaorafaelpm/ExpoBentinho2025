@@ -5,11 +5,13 @@ import com.myrpggame.Enum.TipoBossAtaque;
 import com.myrpggame.Models.Fase;
 import com.myrpggame.Models.Inimigo;
 import com.myrpggame.Models.Player;
-import javafx.animation.FadeTransition;
-import javafx.animation.KeyFrame;
-import javafx.animation.KeyValue;
-import javafx.animation.Timeline;
+import javafx.animation.*;
+import javafx.geometry.Bounds;
+import javafx.scene.control.Label;
+import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Font;
 import javafx.util.Duration;
 
 import java.util.ArrayList;
@@ -53,7 +55,7 @@ public class BossAttack {
     private final List<BossProjectile> bossProjeteis = new ArrayList<>();
     private final List<BossProjectileParticle> bossParticles = new ArrayList<>();
 
-    private EstadoBossAtaque estadoAtual = EstadoBossAtaque.HELL_BULLET;
+    private EstadoBossAtaque estadoAtual = EstadoBossAtaque.PAUSA;
 
     public BossAttack(Inimigo boss, Player player, Pane gameWorld , Fase fase) {
         this.boss = boss;
@@ -70,26 +72,15 @@ public class BossAttack {
     public List<BossProjectileParticle> getParticles() {
         return bossParticles;
     }
-
     public void atualizar(long now) {
-        double dx = player.getSprite().getTranslateX() - boss.getCorpo().getTranslateX();
-        if (!acordado && dx < 200) {
-            acordado = true;
-            estadoAtual = EstadoBossAtaque.HELL_BULLET;
-            lastSwitch = now;
-            lastTimeAttack = now;
-        }
-
         if (!acordado) return;
 
         switch (estadoAtual) {
             case HELL_BULLET -> {
-                // dispara ondas contínuas a cada 2s
                 if (now - lastTimeAttack >= INTERVALO_HELLBULLET) {
                     lastTimeAttack = now;
                     gerarAtaque();
                 }
-                // troca para PARTICLE após 15s
                 if (now - lastSwitch >= DURACAO_HELLBULLET) {
                     estadoAtual = EstadoBossAtaque.PARTICLE;
                     lastSwitch = now;
@@ -101,15 +92,12 @@ public class BossAttack {
                     lastTimeAttack = now;
                     gerarParticulasSeguidoras(now);
                 }
-
                 if (now - lastSwitch >= DURACAO_PARTICLE) {
                     estadoAtual = EstadoBossAtaque.PAUSA;
                     lastSwitch = now;
                 }
             }
-
             case PAUSA -> {
-                // nada acontece, apenas espera
                 if (now - lastSwitch >= DURACAO_PAUSA) {
                     estadoAtual = EstadoBossAtaque.HELL_BULLET;
                     lastSwitch = now;
@@ -118,19 +106,96 @@ public class BossAttack {
             }
         }
     }
-    private void expireAllParticles() {
-        List<BossProjectileParticle> copia = new ArrayList<>(bossParticles);
-        for (BossProjectileParticle p : copia) {
-            if (!p.isDying()) {
-                p.startFadeAndMark(gameWorld); // inicia fade; NÃO remove da lista
-            }
-        }
+
+    public boolean isAcordado() {
+        return acordado;
+    }
+
+    // dentro do método acordar(long now)
+    public void acordar(long now) {
+        if (acordado) return;
+        acordado = true;
+        estadoAtual = EstadoBossAtaque.PAUSA;
+        lastSwitch = now;
+        lastTimeAttack = now;
+
+        // --- Título estilizado ---
+        Label titulo = new Label("EX número 0");
+        titulo.setFont(new Font("Impact", 64));
+        titulo.setTextFill(Color.WHITE);
+
+        DropShadow sombra = new DropShadow();
+        sombra.setOffsetX(3);
+        sombra.setOffsetY(3);
+        sombra.setColor(Color.BLACK);
+        titulo.setEffect(sombra);
+
+        titulo.setOpacity(0);
+        gameWorld.getChildren().add(titulo);
+
+        // Centraliza horizontalmente sobre a cabeça do boss
+        titulo.layoutBoundsProperty().addListener((obs, oldBounds, newBounds) -> {
+            double bossX = getBossX();
+            double bossY = getBossY();
+            double bossWidth = boss.getCorpo().getFitWidth();
+            titulo.setLayoutX(bossX + (bossWidth / 2.0) - (newBounds.getWidth() / 2.0));
+            titulo.setLayoutY(bossY - 150); // posição final acima da cabeça
+        });
+
+        // --- Fade in ---
+        FadeTransition fadeIn = new FadeTransition(Duration.seconds(1.5), titulo);
+        fadeIn.setFromValue(0);
+        fadeIn.setToValue(1);
+
+        // --- Movimento suave para posição final (usando Timeline para easing) ---
+        double initialY = -100; // começa fora da tela
+        double finalY = getBossY() - 150; // acima da cabeça do boss
+        Timeline moverSuave = new Timeline(
+                new KeyFrame(Duration.seconds(0), new KeyValue(titulo.layoutYProperty(), initialY)),
+                new KeyFrame(Duration.seconds(2), new KeyValue(titulo.layoutYProperty(), finalY))
+        );
+
+        // --- Rotação leve durante a descida ---
+        RotateTransition rotacionar = new RotateTransition(Duration.seconds(2), titulo);
+        rotacionar.setFromAngle(-5);
+        rotacionar.setToAngle(5);
+        rotacionar.setCycleCount(4);
+        rotacionar.setAutoReverse(true);
+
+        // --- Brilho pulsante ---
+        Timeline brilho = new Timeline(
+                new KeyFrame(Duration.seconds(0),   new KeyValue(titulo.textFillProperty(), Color.RED)),
+                new KeyFrame(Duration.seconds(0.5), new KeyValue(titulo.textFillProperty(), Color.YELLOW)),
+                new KeyFrame(Duration.seconds(1),   new KeyValue(titulo.textFillProperty(), Color.RED))
+        );
+        brilho.setCycleCount(4);
+
+        // --- Fade out após pausa ---
+        FadeTransition fadeOut = new FadeTransition(Duration.seconds(1.5), titulo);
+        fadeOut.setFromValue(1);
+        fadeOut.setToValue(0);
+        fadeOut.setDelay(Duration.seconds(3)); // espera a descida + brilho
+
+        // --- Combina tudo ---
+        ParallelTransition entradaBoss = new ParallelTransition(fadeIn, moverSuave, rotacionar, brilho, fadeOut);
+        entradaBoss.setOnFinished(e -> gameWorld.getChildren().remove(titulo));
+        entradaBoss.play();
+    }
+
+    public Inimigo getBoss () {
+        return boss;
+    }
+
+    // getters simples para posição do boss (usados pelo GameLoop)
+    public double getBossX() {
+        return boss.getCorpo().getX();
+    }
+    public double getBossY() {
+        return boss.getCorpo().getY();
     }
 
     // gerar com spawnTime e ttl
     private void gerarParticulasSeguidoras(long now) {
-        // marca todas as partículas existentes para sumir (fade)
-        expireAllParticles();
 
         int particleCount = 1 + random.nextInt(2); // 1 a 2 partículas
         for (int i = 0; i < particleCount; i++) {

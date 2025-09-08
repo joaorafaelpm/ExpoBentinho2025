@@ -7,6 +7,7 @@ import javafx.animation.Timeline;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
@@ -28,6 +29,8 @@ public class HUDVida {
     private boolean morto = false;
     private long morteStartTime = 0;
 
+    private int numberLifeOrb = 0;
+
     private final String[] breakFrames = {
             "/assets/LostLife_1.png",
             "/assets/LostLife_2.png",
@@ -46,10 +49,13 @@ public class HUDVida {
     private final Image backgroundHUD = ResourceLoader.loadImage("/assets/MaskBackground.png");
     private final Image mascaraCheia = ResourceLoader.loadImage("/assets/FullMask.png");
     private final Image mascaraVazia = ResourceLoader.loadImage("/assets/EmptyMask.png");
+    private final ImageView lifeOrbIcon = new ImageView(ResourceLoader.loadImage("/assets/lifeOrb.png"));
+    private final Label lifeOrbLabel = new Label("0");
 
     public HUDVida(Player player) {
         this.player = player;
         this.hpAtual = player.getVida();
+        this.numberLifeOrb = player.getLifeOrb();
         inicializar();
     }
 
@@ -82,8 +88,17 @@ public class HUDVida {
             masksContainer.getChildren().add(mask);
         }
 
+        lifeOrbIcon.setFitWidth(24);
+        lifeOrbIcon.setFitHeight(24);
+        lifeOrbLabel.setText(String.valueOf(numberLifeOrb));
+        lifeOrbLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;");
+
+        HBox lifeOrbContainer = new HBox(5, lifeOrbIcon, lifeOrbLabel);
+        lifeOrbContainer.setAlignment(Pos.TOP_RIGHT);
+        lifeOrbContainer.setPadding(new Insets(10, 15, 0, 0));
+
         // Adiciona background e máscaras ao container principal
-        barraVidaContainer.getChildren().addAll(background, masksContainer);
+        barraVidaContainer.getChildren().addAll(background, masksContainer , lifeOrbContainer);
 
         // Alinhamento
         StackPane.setAlignment(background, Pos.CENTER_LEFT);
@@ -189,6 +204,21 @@ public class HUDVida {
         }));
 
         timeline.play();
+    }
+
+    private void atualizarLifeOrbs(int novoValor) {
+        this.numberLifeOrb = novoValor;
+        this.lifeOrbLabel.setText(String.valueOf(numberLifeOrb));
+    }
+
+    public void adicionarLifeOrb(int qtd) {
+        player.adicionarLifeOrb(qtd);
+        atualizarLifeOrbs(player.getLifeOrb());
+    }
+
+    public void removerLifeOrb(int qtd) {
+        player.removerLifeOrb(qtd);
+        atualizarLifeOrbs(player.getLifeOrb());
     }
 
     public Player getPlayer() {

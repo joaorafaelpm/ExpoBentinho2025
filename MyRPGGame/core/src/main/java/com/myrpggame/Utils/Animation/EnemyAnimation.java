@@ -25,6 +25,9 @@ public class EnemyAnimation {
     private int maxFlyingFramesRunning = 2;
     private int runningFrame = 1;
 
+    private int maxBossIdle = 56;
+    private int bossIdleFrame = 1;
+
     private int maxCommonFramesRunning = 8;
     private int runningFlyingFrame = 1;
     private int idleFrame = 1;
@@ -90,10 +93,26 @@ public class EnemyAnimation {
                 }
             }
 
+            case BOSS -> {
+                long frameDuration = 125_000_000L; // 0.125s por frame (7s no total)
+                if (now - lastUpdate < frameDuration) return;
+                bossIdle(inimigo);
+            }
+
         }
 
         lastUpdate = now;
     }
+
+    public void bossIdle(Inimigo inimigo) {
+        bossIdleFrame++;
+        if (bossIdleFrame > maxBossIdle) bossIdleFrame = 1; // reinicia no loop
+
+        inimigo.getCorpo().setImage(ResourceLoader.loadImage(
+                String.format("/assets/inimigos/boss/idle/BossIdle (%d).png", bossIdleFrame)
+        ));
+    }
+
 
     public void commonIdle (Inimigo inimigo) {
         idleFrame++;

@@ -14,6 +14,7 @@ public class Player {
     private int vidaMaxima = 8;
     private int dano;
     private static Set<Fase> salasConcluidas = new HashSet<>();
+    private int lifeOrb = 0;
 
     public Player(Image imagemInicial, double x, double y) {
         this.sprite = new ImageView(imagemInicial);
@@ -21,10 +22,22 @@ public class Player {
         this.sprite.setTranslateY(y);
         this.vida = 8;
         this.dano = 15;
+        this.lifeOrb = 0;
     }
 
     public static boolean isSalaConcluida(Fase fase) {
         return salasConcluidas.contains(fase);
+    }
+
+    public void adicionarLifeOrb (int numeroAdicionado) {
+        this.lifeOrb+=numeroAdicionado;
+    }
+
+    public void removerLifeOrb (int numeroRemovido) {
+        this.lifeOrb-=numeroRemovido;
+    }
+    public void resetLifeOrb () {
+        this.lifeOrb = 0;
     }
 
     public static void concluirSala(Fase fase) {
@@ -68,5 +81,11 @@ public class Player {
     public int getDano() {
         return dano;
     }
+
+    public int getLifeOrb() {
+        return lifeOrb;
+    }
+
+
 }
 
