@@ -6,19 +6,23 @@ import com.myrpggame.Models.Fase;
 import com.myrpggame.Models.Inimigo;
 import com.myrpggame.Models.Player;
 import javafx.animation.*;
-import javafx.geometry.Bounds;
 import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
 import javafx.scene.layout.Pane;
+import javafx.scene.media.MediaPlayer;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.util.Duration;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import java.util.ArrayList;
+
+
 public class BossAttack {
+
+    private MediaPlayer bossMusic;
 
     private final Inimigo boss;
     private final Player player;
@@ -56,6 +60,9 @@ public class BossAttack {
     private final List<BossProjectileParticle> bossParticles = new ArrayList<>();
 
     private EstadoBossAtaque estadoAtual = EstadoBossAtaque.PAUSA;
+
+
+
 
     public BossAttack(Inimigo boss, Player player, Pane gameWorld , Fase fase) {
         this.boss = boss;
@@ -326,6 +333,9 @@ public class BossAttack {
             fadeOut.play();
         });
     }
+
+
+
 
     // limpa projéteis ao trocar de sala
     public void resetar() {

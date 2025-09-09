@@ -8,8 +8,9 @@ version = '1.0-SNAPSHOT'
 
 javafx {
     version = "21.0.8"
-    modules = [ 'javafx.controls', 'javafx.fxml']
+    modules = [ 'javafx.controls', 'javafx.fxml', 'javafx.media']
 }
+
 
 repositories {
     mavenCentral()
@@ -17,4 +18,8 @@ repositories {
 
 dependencies {
     implementation "com.badlogicgames.gdx:gdx:1.12.1"
+    implementation "org.openjfx:javafx-base:21.0.8"
+    implementation "org.openjfx:javafx-controls:21.0.8"
+    implementation "org.openjfx:javafx-fxml:21.0.8"
+    implementation "org.openjfx:javafx-media:21.0.8"
 }

@@ -79,7 +79,7 @@ public class PlayerMovement {
     public void processarMovimento() {
         if (dashing || bloqueado) return;
 
-        velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 500 : 5;
+        velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 10 : 5;
 
         if (pressedKeys.contains(KeyCode.A)) {
             player.setTranslateX(player.getTranslateX() - velocidadePlayer);

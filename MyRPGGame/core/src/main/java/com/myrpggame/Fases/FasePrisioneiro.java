@@ -23,7 +23,6 @@ public class FasePrisioneiro extends Fase {
         // Quantidade aleatória de inimigos entre 3 e 6
         Random rand = new Random();
         setQuantidadeInimigos(8 + rand.nextInt(4));
-        setQuantidadeInimigos(4);
     }
 
     @Override

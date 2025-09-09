@@ -13,16 +13,18 @@ import com.myrpggame.Utils.PlayerCamera.Camera;
 import com.myrpggame.Utils.PlayerMovement.PlayerMovement;
 import javafx.animation.AnimationTimer;
 import javafx.application.Platform;
-import javafx.geometry.Pos;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 
-import java.util.ArrayList;
-import java.util.Iterator;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import java.util.List;
-import java.util.Set;
+import java.util.Random;
+
+
+import java.util.*;
 
 import static com.myrpggame.Config.GameResolution.GameResolution.getAltura;
 import static com.myrpggame.Config.GameResolution.GameResolution.getLargura;
@@ -32,7 +34,7 @@ public class GameLoop extends AnimationTimer {
     private final ImageView player;
     private final Pane gameWorld;
     private final Pane pauseMenu;
-    private HUDVida hudVida;
+    private final HUDVida hudVida;
     private final Camera camera;
     private final VBox telaParabens;
 
@@ -67,11 +69,36 @@ public class GameLoop extends AnimationTimer {
 
     private final Set<KeyCode> pressedKeys;
 
-    final double BOSS_WAKE_DISTANCE = 300.0;
+    final double BOSS_WAKE_DISTANCE = 600.0;
     final double BOSS_WAKE_DISTANCE_SQ = BOSS_WAKE_DISTANCE * BOSS_WAKE_DISTANCE;
 
     private boolean exibindoTelaParabens = false;
 
+    private final List<String> bossMusicFiles = List.of(
+            "audio/BackGround_1.mp3",
+            "audio/BackGround_2.mp3",
+            "audio/BackGround_3.mp3",
+            "audio/BackGround_4.mp3"
+    );
+    private MediaPlayer bossMusicPlayer;
+    private boolean bossMusicStarted = false;
+
+
+    private void tocarMusicaBoss() {
+        if (bossMusicStarted) return; // só inicia uma vez
+        bossMusicStarted = true;
+
+        Random random = new Random();
+        String filePath = bossMusicFiles.get(random.nextInt(bossMusicFiles.size()));
+
+        // Usa getResource para pegar o arquivo dentro do resources
+        Media media = new Media(Objects.requireNonNull(getClass().getResource("/" + filePath)).toExternalForm());
+        bossMusicPlayer = new MediaPlayer(media);
+        bossMusicPlayer.setVolume(0.2);
+        bossMusicPlayer.setCycleCount(MediaPlayer.INDEFINITE); // toca em loop
+        bossMusicPlayer.play();
+
+    }
 
     public GameLoop(ImageView player, Pane gameWorld, Pane pauseMenu, Set<KeyCode> pressedKeys, HUDVida hudVida , VBox telaParabens) {
         this.player = player;
@@ -117,6 +144,7 @@ public class GameLoop extends AnimationTimer {
 
         if (bossAttack != null) {
             if (!bossAttack.isAcordado()) {
+                tocarMusicaBoss();
 
                 double px = player.getTranslateX();
                 double py = player.getTranslateY();
@@ -188,6 +216,9 @@ public class GameLoop extends AnimationTimer {
             Platform.runLater(() -> {
                 // Aqui você chama a tela que já existe no GameGUI
                 telaParabens.setVisible(true);
+                if (bossMusicPlayer != null) {
+                    bossMusicPlayer.stop(); // para a música
+                }
             });
         }
 
@@ -316,6 +347,8 @@ public class GameLoop extends AnimationTimer {
 
 
     private void iniciarMorte(long now) {
+        bossMusicPlayer.stop();
+        bossMusicStarted = false;
         morto = true;
         morteStartTime = now;
         playerMovement.bloquearMovimento();
@@ -429,6 +462,11 @@ public class GameLoop extends AnimationTimer {
     public GerenciadorDeFase getGerenciadorDeFase() {
         return gerenciadorDeFase;
     }
+
+
+
+
+
 
     public void setExibindoTelaParabens(boolean b) {
         this.exibindoTelaParabens = b;
