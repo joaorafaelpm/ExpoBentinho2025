@@ -1,9 +1,11 @@
 package com.myrpggame;
 
+import com.myrpggame.Config.ResourceLoader.ResourceLoader;
 import com.myrpggame.Models.GerenciadorDeFase ;
 import com.myrpggame.Models.Player;
 import com.myrpggame.Utils.GameLoop;
 import com.myrpggame.Utils.HUDVida;
+import com.myrpggame.Utils.WinTimes;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -12,15 +14,14 @@ import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Pane;
 import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 import static com.myrpggame.Config.GameResolution.GameResolution.getAltura;
 import static com.myrpggame.Config.GameResolution.GameResolution.getLargura;
@@ -34,11 +35,42 @@ public class GameGUI {
     private final VBox hudContainer;
     private final VBox pauseMenu;
 
-    private final VBox telaParabens; // adiciona no topo da classe
-    private int vezesGanhas = 1; // contador de vitórias
+    private final WinTimes winTimes;
 
-    public GameGUI(Stage stage) {
-        MenuGUI menuGUI = new MenuGUI(stage);
+    private final VBox telaParabens; // adiciona no topo da classe
+
+    private final Random random = new Random();
+
+    private final List<String> finalImage = List.of(
+            "/assets/telafinal/gatoBurro.jpg",
+            "/assets/telafinal/gatoBurro.jpg",
+            "/assets/telafinal/larry.jpeg",
+            "/assets/telafinal/rigby.png",
+            "/assets/telafinal/gatoDePe.jpg",
+            "/assets/telafinal/gatobombaatomica.jpg",
+            "/assets/telafinal/gatoguerra.jpg",
+            "/assets/telafinal/gatoabsolutocinema.jpg",
+            "/assets/telafinal/gatoroblox.jpg",
+            "/assets/telafinal/gatonerd.jpg",
+            "/assets/telafinal/gatonerd2.jpg",
+            "/assets/telafinal/gatorezando.jpg",
+            "/assets/telafinal/gatocozinheiro.jpg",
+            "/assets/telafinal/gatobanana.jpg",
+            "/assets/telafinal/gatouiia.jpg",
+            "/assets/telafinal/gatoexplosivo.jpg",
+            "/assets/telafinal/gatodeterno.jpg",
+            "/assets/telafinal/gatofodadeterno.jpg",
+            "/assets/telafinal/gatocorujadeterno.jpg",
+            "/assets/telafinal/gatocoruja.jpg",
+            "/assets/telafinal/gatomorango.jpg"
+    );
+
+
+
+    public GameGUI(Stage stage , WinTimes winTimes) {
+        MenuGUI menuGUI = new MenuGUI(stage , winTimes);
+
+        this.winTimes = winTimes;
 
         // Player
         Image knightAFK = new Image(
@@ -76,12 +108,12 @@ public class GameGUI {
 
 // Imagens laterais
         ImageView imgEsquerda = new ImageView(new Image(
-                Objects.requireNonNull(getClass().getResource("/assets/gatoBurro.jpg")).toExternalForm()));
+                Objects.requireNonNull(getClass().getResource(finalImage.get(random.nextInt(finalImage.size())))).toExternalForm()));
         imgEsquerda.setFitWidth(300);
         imgEsquerda.setPreserveRatio(true);
 
         ImageView imgDireita = new ImageView(new Image(
-                Objects.requireNonNull(getClass().getResource("/assets/gatoFoda.jpg")).toExternalForm()));
+                Objects.requireNonNull(getClass().getResource(finalImage.get(random.nextInt(finalImage.size())))).toExternalForm()));
         imgDireita.setFitWidth(300);
         imgDireita.setPreserveRatio(true);
 
@@ -115,7 +147,7 @@ public class GameGUI {
 // Atualiza contador de vitórias toda vez que a tela for exibida
         telaParabens.visibleProperty().addListener((obs, antigo, novo) -> {
             if (novo) {
-                contadorVitorias.setText("Vitórias: " + vezesGanhas);
+                contadorVitorias.setText("Vitórias: " + winTimes.getNumeroDeVitorias());
             }
         });
 
@@ -124,7 +156,10 @@ public class GameGUI {
         Button continuar = new Button("Continuar");
         Button voltarMenu = new Button("Voltar ao Menu");
         continuar.setOnAction(e -> pauseMenu.setVisible(false));
-        voltarMenu.setOnAction(e -> stage.setScene(menuGUI.getScene()));
+        voltarMenu.setOnAction(e -> {
+            stage.setScene(menuGUI.getScene());
+            stage.setFullScreen(true);
+        });
         pauseMenu.getChildren().addAll(continuar, voltarMenu);
 
         // Evita que barra de espaço acione os botões
@@ -147,6 +182,8 @@ public class GameGUI {
 
         gameLoop.start();
         // Controles
+//        Quando eu apertar ESC não tira o fullScreen
+        stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
         scene.setOnKeyPressed(event -> {
             pressedKeys.add(event.getCode());
             if (event.getCode() == KeyCode.ESCAPE) pauseMenu.setVisible(!pauseMenu.isVisible());
@@ -163,7 +200,7 @@ public class GameGUI {
     }
 
     private void resetarJogo(GameLoop gameLoop) {
-        vezesGanhas++; // incrementa contador
+        winTimes.addVitoria();
         gameLoop.getPlayerAttack().desbloquearAtaque();
         gameLoop.getPlayerMovement().desbloquearMovimento();
         gameLoop.getHudVida().resetarVida(); // reseta vida
@@ -171,6 +208,7 @@ public class GameGUI {
         gameLoop.getGerenciadorDeFase().resetarFases(); // volta fase inicial
         gameLoop.carregarSala();
         gameLoop.posicionarPlayerNoInicio();
+        gameLoop.resetarMusicaBoss();
     }
 
 

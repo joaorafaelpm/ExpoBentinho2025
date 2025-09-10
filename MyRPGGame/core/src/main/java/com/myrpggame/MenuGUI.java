@@ -1,6 +1,7 @@
 package com.myrpggame;
 
 import com.myrpggame.Config.GameResolution.GameResolution;
+import com.myrpggame.Utils.WinTimes;
 import javafx.application.Platform;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -13,17 +14,18 @@ import static com.myrpggame.Config.GameResolution.GameResolution.getLargura;
 
 public class MenuGUI {
     private final Scene scene;
-
-    public MenuGUI(Stage stage) {
-
+    private final WinTimes winTimes;
+    public MenuGUI(Stage stage , WinTimes winTimes) {
+        this.winTimes = winTimes;
         Button startButton = new Button("Começar");
         Button configButton = new Button("Configurações");
         Button quitButton = new Button("Sair");
 
         startButton.setOnAction(e -> {
-            // Quando clica em Start, troca para a cena do jogo
-            mostrarJogo(stage);
+            DifficultyGUI difficultyGUI = new DifficultyGUI(stage , winTimes);
+            GameResolution.changeScene(stage, difficultyGUI.getScene());
         });
+
 
         configButton.setOnAction(e -> {
             mostrarConfiguracoes(stage);
@@ -39,12 +41,8 @@ public class MenuGUI {
         scene.getStylesheets().add(getClass().getResource("/styles/styleMenu.css").toExternalForm());
     }
 
-    private static void mostrarJogo(Stage stage) {
-        GameGUI gameView = new GameGUI(stage);
-        GameResolution.changeScene(stage , gameView.getScene());
-    }
-    private static void mostrarConfiguracoes(Stage stage) {
-        ConfigGUI configGUI = new ConfigGUI(stage);
+    private void mostrarConfiguracoes(Stage stage) {
+        ConfigGUI configGUI = new ConfigGUI(stage , winTimes);
         GameResolution.changeScene(stage , configGUI.getScene());
     }
 

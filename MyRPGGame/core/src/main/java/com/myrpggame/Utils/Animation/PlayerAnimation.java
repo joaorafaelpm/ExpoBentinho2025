@@ -93,8 +93,6 @@ public class PlayerAnimation {
         else if (pressedKeys.contains(KeyCode.SPACE) || playerMovement.isPulando()) {
             playerState = PlayerState.JUMPING;
         }
-        else if (pressedKeys.contains(KeyCode.W)) playerState = PlayerState.LOOKING_UP;
-        else if (pressedKeys.contains(KeyCode.S)) playerState = PlayerState.LOOKING_DOWN;
         else if (!playerMovement.isPulando() && (pressedKeys.contains(KeyCode.A) || pressedKeys.contains(KeyCode.D))) {
             playerState = PlayerState.RUNNING;
         }
@@ -118,8 +116,6 @@ public class PlayerAnimation {
             case RUNNING -> animRunning();
             case DASHING -> animDashing();
             case ATTACKING -> animAttacking(now);
-            case LOOKING_UP -> animLookingUp();
-            case LOOKING_DOWN -> animLookingDown();
             case DEAD -> animDead(now);
             case RESPAWNING -> animRespawning(now);
             case JUMPING -> animJumping(now, playerMovement);
@@ -190,16 +186,6 @@ public class PlayerAnimation {
             aplicarDirecao(true);
             lastAttackUpdate = now;
         }
-    }
-
-    private void animLookingUp() {
-        player.setImage(ResourceLoader.loadImage("/assets/KnightLookUp.png"));
-        aplicarDirecao(true);
-    }
-
-    private void animLookingDown() {
-        player.setImage(ResourceLoader.loadImage("/assets/KnightLookDown.png"));
-        aplicarDirecao(true);
     }
 
     private void animDead(long now) {

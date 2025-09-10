@@ -29,12 +29,12 @@ public class Player {
         return salasConcluidas.contains(fase);
     }
 
-    public void adicionarLifeOrb (int numeroAdicionado) {
-        this.lifeOrb+=numeroAdicionado;
+    public void adicionarLifeOrb () {
+        this.lifeOrb++;
     }
 
-    public void removerLifeOrb (int numeroRemovido) {
-        this.lifeOrb-=numeroRemovido;
+    public void removerLifeOrb () {
+        this.lifeOrb--;
     }
     public void resetLifeOrb () {
         this.lifeOrb = 0;

@@ -91,7 +91,7 @@ public class HUDVida {
         lifeOrbIcon.setFitWidth(24);
         lifeOrbIcon.setFitHeight(24);
         lifeOrbLabel.setText(String.valueOf(numberLifeOrb));
-        lifeOrbLabel.setStyle("-fx-text-fill: white; -fx-font-size: 16px; -fx-font-weight: bold;");
+        lifeOrbLabel.setStyle("-fx-text-fill: black; -fx-font-size: 16px; -fx-font-weight: bold;");
 
         HBox lifeOrbContainer = new HBox(5, lifeOrbIcon, lifeOrbLabel);
         lifeOrbContainer.setAlignment(Pos.TOP_RIGHT);
@@ -211,13 +211,13 @@ public class HUDVida {
         this.lifeOrbLabel.setText(String.valueOf(numberLifeOrb));
     }
 
-    public void adicionarLifeOrb(int qtd) {
-        player.adicionarLifeOrb(qtd);
+    public void adicionarLifeOrb() {
+        player.adicionarLifeOrb();
         atualizarLifeOrbs(player.getLifeOrb());
     }
 
-    public void removerLifeOrb(int qtd) {
-        player.removerLifeOrb(qtd);
+    public void removerLifeOrb() {
+        player.removerLifeOrb();
         atualizarLifeOrbs(player.getLifeOrb());
     }
 

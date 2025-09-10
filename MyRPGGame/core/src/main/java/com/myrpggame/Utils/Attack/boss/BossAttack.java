@@ -1,10 +1,12 @@
 package com.myrpggame.Utils.Attack.boss;
 
+import com.myrpggame.Enum.Difficulty;
 import com.myrpggame.Enum.EstadoBossAtaque;
 import com.myrpggame.Enum.TipoBossAtaque;
 import com.myrpggame.Models.Fase;
 import com.myrpggame.Models.Inimigo;
 import com.myrpggame.Models.Player;
+import com.myrpggame.Utils.DifficultyLevel;
 import javafx.animation.*;
 import javafx.scene.control.Label;
 import javafx.scene.effect.DropShadow;
@@ -22,20 +24,18 @@ import java.util.ArrayList;
 
 public class BossAttack {
 
-    private MediaPlayer bossMusic;
-
     private final Inimigo boss;
     private final Player player;
     private final Pane gameWorld;
     private final Fase fase;
     private final Random random = new Random();
-
+    private final Difficulty difficulty = DifficultyLevel.getDifficulty();
     private boolean acordado = false;
 
-    private final double projectileSpeed = 5;
+    private final double projectileSpeed = getProjetilSpeed(difficulty);
 
     // adicione estes campos (ajuste se quiser):
-    private static final int SAFE_ZONE_SIZE = 1; // quantas linhas acima e abaixo ficam seguras
+    private static final int SAFE_ZONE_SIZE = 2; // quantas linhas acima e abaixo ficam seguras
     private static final int SAFE_ZONES = 6;          // agora 4 caminhos seguros
     private static final int SAFE_MIN_SEP_COLS = 2;   // exige ao menos 2 colunas de distância
     private static final double GAP_X = 10.0;         // espaçamento horizontal entre projéteis (px)
@@ -48,9 +48,6 @@ public class BossAttack {
     private final long DURACAO_HELLBULLET = 15_000_000_000L; // 15s
     private final long DURACAO_PARTICLE   = 15_000_000_000L; // 15s
     private final long DURACAO_PAUSA      = 5_000_000_000L;  // 5s
-
-    private final long INTERVALO_HELLBULLET = 2_000_000_000L; // 2s entre projéteis
-    private final long INTERVALO_PARTICLE   = 5_000_000_000L; // 5s entre partículas
 
     private final long PARTICLE_LIFE_TIME = 5_000_000_000L; // 5s
 
@@ -84,7 +81,9 @@ public class BossAttack {
 
         switch (estadoAtual) {
             case HELL_BULLET -> {
-                if (now - lastTimeAttack >= INTERVALO_HELLBULLET) {
+                long intervaloHellBullet = getDuration(difficulty);
+
+                if (now - lastTimeAttack >= intervaloHellBullet) {
                     lastTimeAttack = now;
                     gerarAtaque();
                 }
@@ -95,7 +94,9 @@ public class BossAttack {
                 }
             }
             case PARTICLE -> {
-                if (now - lastTimeAttack >= INTERVALO_PARTICLE) {
+                // 5s entre partículas
+                long intervaloParticle = 5_000_000_000L;
+                if (now - lastTimeAttack >= intervaloParticle) {
                     lastTimeAttack = now;
                     gerarParticulasSeguidoras(now);
                 }
@@ -334,7 +335,35 @@ public class BossAttack {
         });
     }
 
+    public long getDuration (Difficulty difficulty) {
+        long duration = 0L ;
+        if (difficulty == Difficulty.EASY) {
+            duration = 5_000_000_000L;
+        }if (difficulty == Difficulty.MEDIUM) {
+            duration = 4_000_000_000L;
+        }if (difficulty == Difficulty.HARD) {
+            duration = 3_000_000_000L;
+        }if (difficulty == Difficulty.DEV) {
+            duration = 2_000_000_000L;
+        }
 
+        return duration;
+    }
+
+    public double getProjetilSpeed (Difficulty difficulty) {
+        double speed = 0 ;
+        if (difficulty == Difficulty.EASY) {
+            speed = 3;
+        }if (difficulty == Difficulty.MEDIUM) {
+            speed = 4;
+        }if (difficulty == Difficulty.HARD) {
+            speed = 5;
+        }if (difficulty == Difficulty.DEV) {
+            speed = 8;
+        }
+
+        return speed;
+    }
 
 
     // limpa projéteis ao trocar de sala

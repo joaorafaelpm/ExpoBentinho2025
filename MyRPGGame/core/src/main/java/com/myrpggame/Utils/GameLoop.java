@@ -75,10 +75,13 @@ public class GameLoop extends AnimationTimer {
     private boolean exibindoTelaParabens = false;
 
     private final List<String> bossMusicFiles = List.of(
-            "audio/BackGround_1.mp3",
-            "audio/BackGround_2.mp3",
-            "audio/BackGround_3.mp3",
-            "audio/BackGround_4.mp3"
+            "audio/ParasiteEve.mp3",
+            "audio/NaturalBornKiller.mp3",
+            "audio/NotReadyToDie.mp3",
+            "audio/TheSummoning.mp3",
+            "audio/SecretGarden.mp3",
+            "audio/TheDevilInI.mp3",
+            "audio/KeepSweet.mp3"
     );
     private MediaPlayer bossMusicPlayer;
     private boolean bossMusicStarted = false;
@@ -94,7 +97,7 @@ public class GameLoop extends AnimationTimer {
         // Usa getResource para pegar o arquivo dentro do resources
         Media media = new Media(Objects.requireNonNull(getClass().getResource("/" + filePath)).toExternalForm());
         bossMusicPlayer = new MediaPlayer(media);
-        bossMusicPlayer.setVolume(0.2);
+        bossMusicPlayer.setVolume(1);
         bossMusicPlayer.setCycleCount(MediaPlayer.INDEFINITE); // toca em loop
         bossMusicPlayer.play();
 
@@ -141,7 +144,6 @@ public class GameLoop extends AnimationTimer {
         boolean atacando = playerAttack.isAtacando();
         boolean dashando = playerMovement.isDashing();
 
-
         if (bossAttack != null) {
             if (!bossAttack.isAcordado()) {
                 tocarMusicaBoss();
@@ -160,7 +162,6 @@ public class GameLoop extends AnimationTimer {
             }
             playerAttack.setBossParticles(bossAttack.getParticles());
             bossAttack.atualizar(now); // atualiza boss e dispara ataque se necessário
-
             // atualiza projéteis do boss
             Iterator<BossProjectile> iter = bossAttack.getProjeteis().iterator();
             Iterator<BossProjectileParticle> iterParticles = bossAttack.getParticles().iterator();
@@ -222,7 +223,6 @@ public class GameLoop extends AnimationTimer {
             });
         }
 
-
         if (!morto && !respawning) {
             playerMovement.aplicarGravidade();
             playerMovement.processarPulo(now);
@@ -268,8 +268,7 @@ public class GameLoop extends AnimationTimer {
                     i--;
                 }
                 else {
-                    hudVida.adicionarLifeOrb(1);
-                    personagem.adicionarLifeOrb(1);
+                    hudVida.adicionarLifeOrb();
                     gameWorld.getChildren().remove(orb);
                     orbs.remove(i);
                     i--;
@@ -279,7 +278,7 @@ public class GameLoop extends AnimationTimer {
 
 
         // Detecta morte
-        if (personagem.getVida() <= 0 && !morto) iniciarMorte(now);
+        if (personagem.getVida() <= 0 && !morto) iniciarMorte(now , bossAttack);
 
         // Processa respawn
         if (morto && now - morteStartTime >= MORTE_DURATION) iniciarRespawn(now);
@@ -298,8 +297,7 @@ public class GameLoop extends AnimationTimer {
         if (personagem.getVida() >= personagem.getVidaMaxima()) return; // vida já cheia
 
         // consome orb
-        personagem.removerLifeOrb(1);
-        hudVida.removerLifeOrb(1);
+        hudVida.removerLifeOrb();
         hudVida.curar(1, personagem);
 
         lastLifeOrbUse = now;
@@ -346,9 +344,11 @@ public class GameLoop extends AnimationTimer {
     }
 
 
-    private void iniciarMorte(long now) {
-        bossMusicPlayer.stop();
-        bossMusicStarted = false;
+    private void iniciarMorte(long now , BossAttack bossAttack) {
+        if (bossAttack != null) {
+            bossMusicPlayer.stop();
+            bossMusicStarted = false;
+        }
         morto = true;
         morteStartTime = now;
         playerMovement.bloquearMovimento();
@@ -455,6 +455,15 @@ public class GameLoop extends AnimationTimer {
         // aqui você pode adicionar efeito visual, como piscar o player
     }
 
+    public void resetarMusicaBoss() {
+        if (bossMusicPlayer != null) {
+            bossMusicPlayer.stop();
+            bossMusicPlayer.dispose(); // libera recurso de áudio
+        }
+        bossMusicPlayer = null;
+        bossMusicStarted = false;
+    }
+
     public PlayerMovement getPlayerMovement() { return playerMovement; }
     public PlayerAttack getPlayerAttack() { return playerAttack; }
     public HUDVida getHudVida() { return hudVida; }
@@ -462,10 +471,6 @@ public class GameLoop extends AnimationTimer {
     public GerenciadorDeFase getGerenciadorDeFase() {
         return gerenciadorDeFase;
     }
-
-
-
-
 
 
     public void setExibindoTelaParabens(boolean b) {

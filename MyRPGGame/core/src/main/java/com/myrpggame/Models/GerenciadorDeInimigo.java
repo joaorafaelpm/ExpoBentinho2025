@@ -1,13 +1,15 @@
 package com.myrpggame.Models;
 
+import com.myrpggame.Enum.Difficulty;
 import com.myrpggame.Enum.EnemyType;
+import com.myrpggame.Utils.DifficultyLevel;
 import javafx.scene.image.ImageView;
 
 import java.util.*;
 
 public class GerenciadorDeInimigo {
 
-
+    private final Difficulty difficulty = DifficultyLevel.getDifficulty();
     private final Fase fase;
     private final List<Inimigo> inimigos = new ArrayList<>();
     private final int inimigosFase;
@@ -15,7 +17,6 @@ public class GerenciadorDeInimigo {
     public GerenciadorDeInimigo(Fase fase) {
         this.fase = fase;
         this.inimigosFase = fase.getQuantidadeInimigos();
-
     }
 
     public void inicializar() {
@@ -47,11 +48,8 @@ public class GerenciadorDeInimigo {
                 case TANK -> 3;
                 case BOSS -> 0;
             };
-            int vida = switch (tipo) {
-                case COMMON, FLYING -> 50;
-                case TANK -> 100;
-                case BOSS -> 500;
-            };
+            int vida = getVida(tipo);
+
             int dano = switch (tipo) {
                 case COMMON, FLYING -> 1;
                 case TANK -> 2;
@@ -100,7 +98,39 @@ public class GerenciadorDeInimigo {
         }
     }
 
+    private int getVida(EnemyType tipo) {
+        int vida = 0;
 
+        if (difficulty == Difficulty.EASY) {
+            vida = switch (tipo) {
+                case COMMON, FLYING -> 15;
+                case TANK -> 60;
+                case BOSS -> 150;
+            };
+        }
+        if (difficulty == Difficulty.MEDIUM) {
+            vida = switch (tipo) {
+                case COMMON, FLYING -> 45;
+                case TANK -> 105;
+                case BOSS -> 400;
+            };
+        }
+        if (difficulty == Difficulty.HARD) {
+            vida = switch (tipo) {
+                case COMMON, FLYING -> 60;
+                case TANK -> 200;
+                case BOSS -> 800;
+            };
+        }
+        if (difficulty == Difficulty.DEV) {
+            vida = switch (tipo) {
+                case COMMON, FLYING -> 100;
+                case TANK -> 300;
+                case BOSS -> 1500;
+            };
+        }
+        return vida;
+    }
 
 
     public List<Inimigo> getInimigos() {
