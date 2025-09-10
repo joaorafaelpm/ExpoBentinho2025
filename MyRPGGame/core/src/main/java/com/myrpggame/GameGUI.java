@@ -1,8 +1,8 @@
 package com.myrpggame;
 
-import com.myrpggame.Config.ResourceLoader.ResourceLoader;
-import com.myrpggame.Models.GerenciadorDeFase ;
+import com.myrpggame.Models.GerenciadorDeFase;
 import com.myrpggame.Models.Player;
+import com.myrpggame.Utils.DifficultyLevel;
 import com.myrpggame.Utils.GameLoop;
 import com.myrpggame.Utils.HUDVida;
 import com.myrpggame.Utils.WinTimes;
@@ -15,10 +15,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyCombination;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
-import javafx.scene.layout.StackPane;
-import javafx.scene.layout.VBox;
+import javafx.scene.layout.*;
 import javafx.stage.Stage;
 
 import java.util.*;
@@ -27,132 +24,76 @@ import static com.myrpggame.Config.GameResolution.GameResolution.getAltura;
 import static com.myrpggame.Config.GameResolution.GameResolution.getLargura;
 
 public class GameGUI {
-
     private final Scene scene;
     private final Set<KeyCode> pressedKeys = new HashSet<>();
     private final ImageView player;
     private final Pane gameWorld;
     private final VBox hudContainer;
     private final VBox pauseMenu;
-
+    private final VBox telaParabens;
     private final WinTimes winTimes;
-
-    private final VBox telaParabens; // adiciona no topo da classe
-
     private final Random random = new Random();
 
     private final List<String> finalImage = List.of(
-            "/assets/telafinal/gatoBurro.jpg",
-            "/assets/telafinal/gatoBurro.jpg",
-            "/assets/telafinal/larry.jpeg",
-            "/assets/telafinal/rigby.png",
-            "/assets/telafinal/gatoDePe.jpg",
-            "/assets/telafinal/gatobombaatomica.jpg",
-            "/assets/telafinal/gatoguerra.jpg",
-            "/assets/telafinal/gatoabsolutocinema.jpg",
-            "/assets/telafinal/gatoroblox.jpg",
-            "/assets/telafinal/gatonerd.jpg",
-            "/assets/telafinal/gatonerd2.jpg",
-            "/assets/telafinal/gatorezando.jpg",
-            "/assets/telafinal/gatocozinheiro.jpg",
-            "/assets/telafinal/gatobanana.jpg",
-            "/assets/telafinal/gatouiia.jpg",
-            "/assets/telafinal/gatoexplosivo.jpg",
-            "/assets/telafinal/gatodeterno.jpg",
-            "/assets/telafinal/gatofodadeterno.jpg",
-            "/assets/telafinal/gatocorujadeterno.jpg",
-            "/assets/telafinal/gatocoruja.jpg",
-            "/assets/telafinal/gatomorango.jpg"
+            "/assets/telafinal/FinalImage (1).jpg", "/assets/telafinal/FinalImage (20).jpg", "/assets/telafinal/FinalImage (1).png",
+            "/assets/telafinal/FinalImage (2).jpg", "/assets/telafinal/FinalImage (3).jpg", "/assets/telafinal/FinalImage (4).jpg",
+            "/assets/telafinal/FinalImage (5).jpg", "/assets/telafinal/FinalImage (6).jpg", "/assets/telafinal/FinalImage (7).jpg",
+            "/assets/telafinal/FinalImage (8).jpg", "/assets/telafinal/FinalImage (9).jpg", "/assets/telafinal/FinalImage (10).jpg",
+            "/assets/telafinal/FinalImage (11).jpg", "/assets/telafinal/FinalImage (12).jpg", "/assets/telafinal/FinalImage (13).jpg",
+            "/assets/telafinal/FinalImage (14).jpg", "/assets/telafinal/FinalImage (15).jpg", "/assets/telafinal/FinalImage (16).jpg",
+            "/assets/telafinal/FinalImage (17).jpg", "/assets/telafinal/FinalImage (18).jpg", "/assets/telafinal/FinalImage (19).jpg"
     );
 
-
-
-    public GameGUI(Stage stage , WinTimes winTimes) {
-        MenuGUI menuGUI = new MenuGUI(stage , winTimes);
-
+    public GameGUI(Stage stage, WinTimes winTimes) {
         this.winTimes = winTimes;
+        MenuGUI menuGUI = new MenuGUI(stage, winTimes);
 
-        // Player
+        // ==== Player e Mundo ====
         Image knightAFK = new Image(
                 Objects.requireNonNull(getClass().getResource("/assets/KnightAFK_1.png")).toExternalForm()
         );
         player = new ImageView(knightAFK);
+        gameWorld = new Pane(player);
 
-        // Game World (móvel com a câmera)
-        gameWorld = new Pane();
-        gameWorld.getChildren().add(player);
-
-        // Player e HUD
+        // ==== HUD ====
         Player personagem = new Player(knightAFK, 100, 0);
         HUDVida hudVida = new HUDVida(personagem);
+        hudContainer = new VBox(hudVida.getBarraVida());
+        hudContainer.setAlignment(Pos.TOP_LEFT);
+        hudContainer.setPadding(new Insets(20, 0, 0, 20));
 
-        // HUD fixo
-        hudContainer = new VBox();
-        hudContainer.getChildren().add(hudVida.getBarraVida());
-        hudContainer.setAlignment(Pos.TOP_LEFT);  // fixa o HUD no canto superior esquerdo
-        hudContainer.setPadding(new Insets(20, 0, 0, 20)); // distancia do topo e da esquerda
+        // ==== Menus e telas ====
+        pauseMenu = criarPauseMenu(stage, menuGUI);
+        telaParabens = criarTelaParabens();
 
-        // Menu de pausa
-        pauseMenu = new VBox(20);
-        pauseMenu.setStyle("-fx-background-color: rgba(0,0,0,0.7); -fx-alignment: center; -fx-padding: 40;");
-        pauseMenu.setVisible(false);
-        pauseMenu.setPrefSize(getLargura(), getAltura());
+        // ==== GameLoop ====
+        GameLoop gameLoop = new GameLoop(player, gameWorld, pauseMenu, pressedKeys, hudVida, telaParabens);
+        inicializarTelaParabens(gameLoop);
 
-        // --- Tela de parabéns ---
-        telaParabens = new VBox(20);
-        GameLoop gameLoop = new GameLoop(player, gameWorld, pauseMenu, pressedKeys, hudVida , telaParabens);
-        telaParabens.setStyle("-fx-background-color: rgba(0,0,0,0.8);");
-        telaParabens.setAlignment(Pos.CENTER);
-        telaParabens.setPrefSize(getLargura(), getAltura());
-        telaParabens.setVisible(false);
+        // ==== Container principal ====
+        StackPane container = new StackPane(gameWorld, hudContainer, pauseMenu, telaParabens);
+        scene = new Scene(container, getLargura(), getAltura());
 
-// Imagens laterais
-        ImageView imgEsquerda = new ImageView(new Image(
-                Objects.requireNonNull(getClass().getResource(finalImage.get(random.nextInt(finalImage.size())))).toExternalForm()));
-        imgEsquerda.setFitWidth(300);
-        imgEsquerda.setPreserveRatio(true);
+        // ==== Controles ====
+        GerenciadorDeFase gerenciador = new GerenciadorDeFase();
+        player.setTranslateX(100);
+        player.setTranslateY(gerenciador.getFaseAtual().getAltura() - knightAFK.getHeight());
 
-        ImageView imgDireita = new ImageView(new Image(
-                Objects.requireNonNull(getClass().getResource(finalImage.get(random.nextInt(finalImage.size())))).toExternalForm()));
-        imgDireita.setFitWidth(300);
-        imgDireita.setPreserveRatio(true);
-
-// Texto central
-        Label textoParabens = new Label("Parabéns! Você venceu!");
-        textoParabens.setStyle("-fx-font-size: 36px; -fx-text-fill: #fff; -fx-font-weight: bold;");
-
-// Contador de vitórias
-        Label contadorVitorias = new Label();
-        contadorVitorias.setStyle("-fx-font-size: 24px; -fx-text-fill: #fff;");
-
-// Botão continuar
-        Button continuarParabens = new Button("Continuar");
-        continuarParabens.setStyle("-fx-font-size: 18px;");
-        continuarParabens.setOnAction(e -> {
-            telaParabens.setVisible(false);
-            gameLoop.setExibindoTelaParabens(false); // reseta a flag
-            resetarJogo(gameLoop);
+        stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
+        scene.setOnKeyPressed(event -> {
+            pressedKeys.add(event.getCode());
+            if (event.getCode() == KeyCode.ESCAPE) pauseMenu.setVisible(!pauseMenu.isVisible());
+            if (event.getCode() == KeyCode.Q) gameLoop.getPlayerMovement().tentarDash();
         });
-
-// VBox central com texto e botão
-        VBox centro = new VBox(20, textoParabens, contadorVitorias, continuarParabens);
-        centro.setAlignment(Pos.CENTER);
-
-// HBox principal da tela de parabéns (imagem esquerda | centro | imagem direita)
-        HBox hboxParabens = new HBox(50, imgEsquerda, centro, imgDireita);
-        hboxParabens.setAlignment(Pos.CENTER);
-
-        telaParabens.getChildren().add(hboxParabens);
-
-// Atualiza contador de vitórias toda vez que a tela for exibida
-        telaParabens.visibleProperty().addListener((obs, antigo, novo) -> {
-            if (novo) {
-                contadorVitorias.setText("Vitórias: " + winTimes.getNumeroDeVitorias());
-            }
+        scene.setOnMousePressed(event -> {
+            if (event.isPrimaryButtonDown()) gameLoop.getPlayerAttack().tentarAtaque();
         });
+        scene.setOnKeyReleased(event -> pressedKeys.remove(event.getCode()));
 
+        gameLoop.start();
+    }
 
-
+    private VBox criarPauseMenu(Stage stage, MenuGUI menuGUI) {
         Button continuar = new Button("Continuar");
         Button voltarMenu = new Button("Voltar ao Menu");
         continuar.setOnAction(e -> pauseMenu.setVisible(false));
@@ -160,57 +101,72 @@ public class GameGUI {
             stage.setScene(menuGUI.getScene());
             stage.setFullScreen(true);
         });
-        pauseMenu.getChildren().addAll(continuar, voltarMenu);
+        VBox pause = new VBox(20, continuar, voltarMenu);
+        pause.setStyle("-fx-background-color: rgba(0,0,0,0.7); -fx-alignment: center; -fx-padding: 40;");
+        pause.setPrefSize(getLargura(), getAltura());
+        pause.setVisible(false);
+        return pause;
+    }
 
-        // Evita que barra de espaço acione os botões
-        continuarParabens.setFocusTraversable(false);
-        continuar.setFocusTraversable(false);
-        voltarMenu.setFocusTraversable(false);
+    private VBox criarTelaParabens() {
+        VBox tela = new VBox();
+        tela.setStyle("-fx-background-color: rgba(0,0,0,0.8);");
+        tela.setPrefSize(getLargura(), getAltura());
+        tela.setVisible(false);
+        return tela;
+    }
 
+    private void inicializarTelaParabens(GameLoop gameLoop) {
+        winTimes.adicionarVitoria(DifficultyLevel.getDifficulty());
+        ImageView imgEsquerda = criarImagemFinal();
+        ImageView imgDireita = criarImagemFinal();
 
-        // Container principal
-        StackPane container = new StackPane();
-        container.getChildren().addAll(gameWorld, hudContainer, pauseMenu , telaParabens);
+        Label parabens = new Label("Parabéns! Você venceu!");
+        parabens.setStyle("-fx-font-size: 36px; -fx-text-fill: #fff; -fx-font-weight: bold;");
 
-        // Scene
-        scene = new Scene(container, getLargura(), getAltura());
+        Label resumo = new Label();
+        resumo.setStyle("-fx-font-size: 20px; -fx-text-fill: #fff;");
 
-        // GameLoop
-        GerenciadorDeFase gerenciador = new GerenciadorDeFase();
-        player.setTranslateX(100);
-        player.setTranslateY(gerenciador.getFaseAtual().getAltura() - knightAFK.getHeight());
-
-        gameLoop.start();
-        // Controles
-//        Quando eu apertar ESC não tira o fullScreen
-        stage.setFullScreenExitKeyCombination(KeyCombination.NO_MATCH);
-        scene.setOnKeyPressed(event -> {
-            pressedKeys.add(event.getCode());
-            if (event.getCode() == KeyCode.ESCAPE) pauseMenu.setVisible(!pauseMenu.isVisible());
-            if (event.getCode() == KeyCode.Q) gameLoop.getPlayerMovement().tentarDash();
+        Button continuar = new Button("Continuar");
+        continuar.setStyle("-fx-font-size: 18px;");
+        continuar.setOnAction(e -> {
+            telaParabens.setVisible(false);
+            gameLoop.setExibindoTelaParabens(false);
+            resetarJogo(gameLoop);
         });
 
-        scene.setOnMousePressed(event -> {
-            if (event.isPrimaryButtonDown()) {
-                gameLoop.getPlayerAttack().tentarAtaque();
-            }
-        });
+        VBox centro = new VBox(20, parabens, resumo, continuar);
+        centro.setAlignment(Pos.CENTER);
 
-        scene.setOnKeyReleased(event -> pressedKeys.remove(event.getCode()));
+        HBox layout = new HBox(50, imgEsquerda, centro, imgDireita);
+        layout.setAlignment(Pos.CENTER);
+
+        telaParabens.getChildren().add(layout);
+
+        telaParabens.visibleProperty().addListener((obs, wasVisible, isVisible) -> {
+            if (isVisible) resumo.setText(winTimes.gerarResumo());
+        });
+    }
+
+    private ImageView criarImagemFinal() {
+        ImageView img = new ImageView(new Image(
+                Objects.requireNonNull(getClass().getResource(
+                        finalImage.get(random.nextInt(finalImage.size())))).toExternalForm()));
+        img.setFitWidth(300);
+        img.setPreserveRatio(true);
+        return img;
     }
 
     private void resetarJogo(GameLoop gameLoop) {
-        winTimes.addVitoria();
         gameLoop.getPlayerAttack().desbloquearAtaque();
         gameLoop.getPlayerMovement().desbloquearMovimento();
-        gameLoop.getHudVida().resetarVida(); // reseta vida
-        gameLoop.getPlayerAttack().getPlayer().resetLifeOrb(); // se tiver
-        gameLoop.getGerenciadorDeFase().resetarFases(); // volta fase inicial
+        gameLoop.getHudVida().resetarVida();
+        gameLoop.getHudVida().resetarLifeOrb();
+        gameLoop.getGerenciadorDeFase().resetarFases();
         gameLoop.carregarSala();
         gameLoop.posicionarPlayerNoInicio();
         gameLoop.resetarMusicaBoss();
     }
-
 
     public Scene getScene() {
         return scene;

@@ -81,7 +81,7 @@ public class GerenciadorDeInimigo {
                 boolean posValida = false;
                 int tentativas = 0;
                 while (!posValida && tentativas < tentativasMax) {
-                    x = 500 + random.nextInt((int)(fase.getLargura()));
+                    x = 500 + random.nextInt((int)(fase.getLargura() - 500));
                     posValida = true;
                     for (Inimigo inim : inimigos) {
                         if (Math.abs(inim.getCorpo().getTranslateX() - x) < distanciaMinima) {
@@ -103,9 +103,9 @@ public class GerenciadorDeInimigo {
 
         if (difficulty == Difficulty.EASY) {
             vida = switch (tipo) {
-                case COMMON, FLYING -> 15;
+                case COMMON, FLYING -> 30;
                 case TANK -> 60;
-                case BOSS -> 150;
+                case BOSS -> 350;
             };
         }
         if (difficulty == Difficulty.MEDIUM) {
@@ -118,14 +118,14 @@ public class GerenciadorDeInimigo {
         if (difficulty == Difficulty.HARD) {
             vida = switch (tipo) {
                 case COMMON, FLYING -> 60;
-                case TANK -> 200;
+                case TANK -> 120;
                 case BOSS -> 800;
             };
         }
         if (difficulty == Difficulty.DEV) {
             vida = switch (tipo) {
-                case COMMON, FLYING -> 100;
-                case TANK -> 300;
+                case COMMON, FLYING -> 60;
+                case TANK -> 120;
                 case BOSS -> 1500;
             };
         }

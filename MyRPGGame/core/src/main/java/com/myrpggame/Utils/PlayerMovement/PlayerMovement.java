@@ -34,6 +34,7 @@ public class PlayerMovement {
 
     private boolean bloqueado = false;
 
+//    Construtor padrão
     public PlayerMovement(ImageView player, double alturaChao, Set<KeyCode> pressedKeys, int currentFrame) {
         this.player = player;
         this.alturaChao = alturaChao;
@@ -41,10 +42,7 @@ public class PlayerMovement {
         this.currentFrame = currentFrame;
     }
 
-    public void setAlturaChao(double alturaChao) {
-        this.alturaChao = alturaChao;
-    }
-
+//    Método auxiliar para aplicar a gravidade da fase caso ele não esteja em dash e na altura máxima do pulo
     public void aplicarGravidade() {
         if (gravidadeAtivo) {
             velocidadeY += gravidade;
@@ -61,6 +59,7 @@ public class PlayerMovement {
         }
     }
 
+//    Método auxiliar para ver se o usuário está pronto para pular
     public void processarPulo(long now) {
         // Inicia o pulo apenas se o player estiver no chão
         if (pressedKeys.contains(KeyCode.SPACE) && !pulando && onGround()) {
@@ -73,13 +72,13 @@ public class PlayerMovement {
         if (pulando && pressedKeys.contains(KeyCode.SPACE) && now - tempoPuloInicio < tempoMaxPulo) {
             velocidadeY = impulsoPulo;
         }
-
     }
 
+    //    Método auxiliar para ver se o usuário está em posição de se mover, e definir a velocidade
     public void processarMovimento() {
         if (dashing || bloqueado) return;
 
-        velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 10 : 5;
+        velocidadePlayer = pressedKeys.contains(KeyCode.SHIFT) ? 15 : 10;
 
         if (pressedKeys.contains(KeyCode.A)) {
             player.setTranslateX(player.getTranslateX() - velocidadePlayer);
@@ -91,6 +90,7 @@ public class PlayerMovement {
         }
     }
 
+//    Método auxiliar para ver se o usuário pode usar o dash (se não está em cooldown e etc)
     public void processarDash(long now) {
         if (dashing) {
             if (now - dashStartTime < DASH_DURATION) {
@@ -108,6 +108,7 @@ public class PlayerMovement {
         }
     }
 
+//    Faz a verificação de dash para avaliar o cooldown
     public void tentarDash() {
         long now = System.nanoTime();
         if (!dashing && canDash && now - lastDashTime >= DASH_COOLDOWN) {

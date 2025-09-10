@@ -33,6 +33,7 @@ public class BossAttack {
     private boolean acordado = false;
 
     private final double projectileSpeed = getProjetilSpeed(difficulty);
+    private final double particleSpeed = getParticleSpeed(difficulty);
 
     // adicione estes campos (ajuste se quiser):
     private static final int SAFE_ZONE_SIZE = 2; // quantas linhas acima e abaixo ficam seguras
@@ -128,7 +129,7 @@ public class BossAttack {
         lastTimeAttack = now;
 
         // --- Título estilizado ---
-        Label titulo = new Label("EX número 0");
+        Label titulo = new Label("Ex número 1");
         titulo.setFont(new Font("Impact", 64));
         titulo.setTextFill(Color.WHITE);
 
@@ -205,17 +206,32 @@ public class BossAttack {
     // gerar com spawnTime e ttl
     private void gerarParticulasSeguidoras(long now) {
 
-        int particleCount = 1 + random.nextInt(2); // 1 a 2 partículas
+        int particleCount = getParticlesCount(difficulty);
         for (int i = 0; i < particleCount; i++) {
             double x = random.nextDouble() * (fase.getLargura() - 40);
             double y = random.nextDouble() * (fase.getAltura() - 40);
 
             BossProjectileParticle particle = new BossProjectileParticle(
-                    x, y, 5, 5, 60, 60, now, PARTICLE_LIFE_TIME
+                    x, y, particleSpeed, particleSpeed, 60, 60, now, PARTICLE_LIFE_TIME
             );
             bossParticles.add(particle);
             gameWorld.getChildren().add(particle.getCorpo());
         }
+    }
+
+    private int getParticlesCount(Difficulty difficulty) {
+        int particleCount = 0 ;
+        if (difficulty == Difficulty.EASY) {
+            particleCount = 1 + random.nextInt(3);
+        }if (difficulty == Difficulty.MEDIUM) {
+            particleCount = 3 + random.nextInt(3);
+        }if (difficulty == Difficulty.HARD) {
+            particleCount = 5 + random.nextInt(4);
+        }if (difficulty == Difficulty.DEV) {
+            particleCount = 8  + random.nextInt(2);
+        }
+
+        return particleCount;
     }
 
     private void gerarAtaque() {
@@ -342,7 +358,7 @@ public class BossAttack {
         }if (difficulty == Difficulty.MEDIUM) {
             duration = 4_000_000_000L;
         }if (difficulty == Difficulty.HARD) {
-            duration = 3_000_000_000L;
+            duration = 2_000_000_000L;
         }if (difficulty == Difficulty.DEV) {
             duration = 2_000_000_000L;
         }
@@ -353,7 +369,7 @@ public class BossAttack {
     public double getProjetilSpeed (Difficulty difficulty) {
         double speed = 0 ;
         if (difficulty == Difficulty.EASY) {
-            speed = 3;
+            speed = 4;
         }if (difficulty == Difficulty.MEDIUM) {
             speed = 4;
         }if (difficulty == Difficulty.HARD) {
@@ -363,6 +379,20 @@ public class BossAttack {
         }
 
         return speed;
+    }
+    public double getParticleSpeed (Difficulty difficulty) {
+        double particleSpeed = 0 ;
+        if (difficulty == Difficulty.EASY) {
+            particleSpeed = 5;
+        }if (difficulty == Difficulty.MEDIUM) {
+            particleSpeed = 5;
+        }if (difficulty == Difficulty.HARD) {
+            particleSpeed = 8;
+        }if (difficulty == Difficulty.DEV) {
+            particleSpeed = 8;
+        }
+
+        return particleSpeed;
     }
 
 

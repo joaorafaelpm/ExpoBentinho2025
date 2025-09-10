@@ -75,13 +75,15 @@ public class GameLoop extends AnimationTimer {
     private boolean exibindoTelaParabens = false;
 
     private final List<String> bossMusicFiles = List.of(
-            "audio/ParasiteEve.mp3",
-            "audio/NaturalBornKiller.mp3",
-            "audio/NotReadyToDie.mp3",
-            "audio/TheSummoning.mp3",
-            "audio/SecretGarden.mp3",
-            "audio/TheDevilInI.mp3",
-            "audio/KeepSweet.mp3"
+            "audio/BackGroundSound (1).mp3",
+            "audio/BackGroundSound (2).mp3",
+            "audio/BackGroundSound (3).mp3",
+            "audio/BackGroundSound (4).mp3",
+            "audio/BackGroundSound (5).mp3",
+            "audio/BackGroundSound (6).mp3",
+            "audio/BackGroundSound (7).mp3",
+            "audio/BackGroundSound (8).mp3",
+            "audio/BackGroundSound (9).mp3"
     );
     private MediaPlayer bossMusicPlayer;
     private boolean bossMusicStarted = false;
@@ -361,6 +363,7 @@ public class GameLoop extends AnimationTimer {
         reviveStartTime = now;
 
         hudVida.resetarVida();
+        hudVida.resetarLifeOrb();
         Player.reset();
         gerenciadorDeFase.resetarFases();
 
